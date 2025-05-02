@@ -24,9 +24,8 @@ logger = logging.getLogger(__name__)
 
 # Initialize Flask app
 app = Flask(__name__, static_folder='../frontend/dist')
-# Configure CORS to allow requests from your React frontend
 CORS(app, resources={r"/*": {
-    "origins": ["http://localhost:5173", "http://127.0.0.1:5173"], 
+    "origins": "*", 
     "allow_headers": ["Content-Type", "Authorization"],
     "methods": ["GET", "POST", "OPTIONS"]
 }})
@@ -365,7 +364,7 @@ def token_exchange():
         flow = InstalledAppFlow.from_client_secrets_file(
             "credentials.json", 
             SCOPES, 
-            redirect_uri=redirect_uri or "http://localhost:5173"
+            redirect_uri=redirect_uri or os.environ.get("REDIRECT_URI", "https://eply.onrender.com")
         )
         
         # Exchange the authorization code for credentials
@@ -403,7 +402,7 @@ def token_exchange():
 def get_auth_url():
     """Get Google OAuth authorization URL."""
     try:
-        redirect_uri = request.args.get('redirect_uri', 'http://localhost:5173/oauth-callback')
+        redirect_uri = request.args.get('redirect_uri', os.environ.get("REDIRECT_URI", 'https://eply.onrender.com/oauth-callback'))
         
         # Create flow instance to manage the OAuth 2.0 Authorization Grant Flow
         flow = InstalledAppFlow.from_client_secrets_file(
