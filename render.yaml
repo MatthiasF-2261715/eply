@@ -6,6 +6,7 @@ services:
       pip install -r backend/requirements.txt && 
       cd frontend && 
       echo "VITE_API_URL=$VITE_API_URL" > .env && 
+      npm install framer-motion &&
       npm install && 
       npm run build
     startCommand: gunicorn --chdir backend 'flask_server:app'
