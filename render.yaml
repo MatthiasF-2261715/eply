@@ -2,7 +2,12 @@ services:
   - type: web
     name: email-automation
     env: python
-    buildCommand: pip install -r backend/requirements.txt && cd frontend && npm install && npm run build
+    buildCommand: |
+      pip install -r backend/requirements.txt && 
+      cd frontend && 
+      echo "VITE_API_URL=$VITE_API_URL" > .env && 
+      npm install && 
+      npm run build
     startCommand: gunicorn --chdir backend 'flask_server:app'
     envVars:
       - key: OPENAI_API_KEY
@@ -13,3 +18,5 @@ services:
         sync: false
       - key: FLASK_ENV
         value: production
+      - key: VITE_API_URL
+        value: https://eply.onrender.com
