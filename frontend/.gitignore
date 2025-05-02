@@ -1,3 +1,4 @@
+d/.gitignore
 # Logs
 logs
 *.log
@@ -22,3 +23,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Explicitly include .vite/deps for framer-motion
+!.vite
+!.vite/deps
+!.vite/deps/_metadata.json
+!.vite/deps/package.json
