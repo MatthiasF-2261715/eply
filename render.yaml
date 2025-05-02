@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: email-automation
+    env: python
+    buildCommand: pip install -r backend/requirements.txt && cd frontend && npm install && npm run build
+    startCommand: gunicorn --chdir backend 'flask_server:app'
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: FLASK_ENV
+        value: production

@@ -1,0 +1,91 @@
+/* Email content styling */
+.email-content {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  line-height: 1.6;
+  color: #333;
+}
+
+.email-content p {
+  margin-bottom: 1em;
+  white-space: pre-wrap;
+}
+
+.email-content div {
+  margin-bottom: 1em;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+.email-content blockquote {
+  border-left: 3px solid #e5e7eb;
+  padding-left: 1rem;
+  color: #6b7280;
+  margin: 1em 0;
+}
+
+.email-content a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+/* Fix for Gmail's div-based formatting */
+.email-content div + div {
+  margin-top: 0.75em;
+}
+
+/* Handle embedded images */
+.email-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Prevent duplicate display of content */
+.email-container {
+  position: relative;
+  width: 100%;
+}
+
+/* Fix for Gmail's quoted content that might be causing duplication */
+.email-content .gmail_quote {
+  display: none;
+}
+
+/* Gmail divs */
+.email-content div.gmail_attr,
+.email-content div.gmail_signature,
+.email-content div.gmail_extra,
+.email-content div.gmail_quote {
+  display: none;
+}
+
+/* Hide any duplicate quote sections that might be appearing */
+.email-content blockquote + blockquote {
+  display: none;
+}
+
+/* Hide all blockquotes except the first (often duplicated content) */
+.email-content blockquote:not(:first-of-type) {
+  display: none;
+}
+
+/* Fix Microsoft Outlook formatting issues */
+.email-content .MsoNormal {
+  margin: 0;
+}
+
+/* Ensure proper nesting of elements */
+.email-content div:has(> div:first-child:last-child) {
+  display: contents;
+}
+
+/* Fix potential nesting issues */
+.email-content > div > div:nth-child(1):nth-last-child(1) {
+  display: contents;
+}
+
+/* Hide elements with duplicate content signatures */
+.email-content div[style*="color: #909090"],
+.email-content div[style*="color:#909090"] {
+  display: none;
+}
