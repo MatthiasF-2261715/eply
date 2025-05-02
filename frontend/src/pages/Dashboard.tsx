@@ -3,6 +3,8 @@ import { Mail, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import '../css/email-styles.css';
 
+const API_URL = import.meta.env.VITE_API_URL || '';
+
 interface Email {
   id: string;
   from: string;
@@ -46,7 +48,7 @@ function Dashboard() {
     }
 
     try {
-      const response = await fetch('http://localhost:5001/auth/verify-token', {
+      const response = await fetch(`${API_URL}/auth/verify-token`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${user.accessToken}`,
@@ -120,7 +122,7 @@ function Dashboard() {
 
       console.log("Using token for Gmail API access", { tokenExists: !!googleToken });
       
-      const response = await fetch('http://localhost:5001/get-emails', {
+      const response = await fetch(`${API_URL}/get-emails`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${googleToken}`,
@@ -177,7 +179,7 @@ function Dashboard() {
       // Debug log to check token
       console.log("Using provider token for reply generation:", !!googleToken);
       
-      const response = await fetch('http://localhost:5001/generate-reply', {
+      const response = await fetch(`${API_URL}/generate-reply`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -265,7 +267,7 @@ function Dashboard() {
       
       // Create URL with query parameter for the email ID
       // Change from 'emailId' to 'id' to match Flask server's expectation
-      const url = new URL('http://localhost:5001/get-email-detail');
+      const url = new URL(`${API_URL}/get-email-detail`);
       url.searchParams.append('id', emailId);  // Changed from 'emailId' to 'id'
       
       const response = await fetch(url.toString(), {
@@ -385,7 +387,7 @@ function Dashboard() {
     // Add a helper function to test token validity
     const testTokenValidity = async (token: string): Promise<boolean> => {
       try {
-        const response = await fetch('http://localhost:5001/auth/verify-token', {
+        const response = await fetch(`${API_URL}/auth/verify-token`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,

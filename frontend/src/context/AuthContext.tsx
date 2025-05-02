@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 
+const API_URL = import.meta.env.VITE_API_URL || '';
+
 interface User {
   id: string;
   email: string;
@@ -48,7 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    */
   const refreshAccessToken = async (refreshToken: string): Promise<string> => {
     try {
-      const response = await fetch('http://localhost:5001/auth/refresh', {
+      const response = await fetch(`${API_URL}/auth/refresh`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -79,7 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    */
   const completeOAuthFlow = async (authCode: string, redirectUri: string): Promise<string> => {
     try {
-      const response = await fetch('http://localhost:5001/auth/token', {
+      const response = await fetch(`${API_URL}/auth/token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -238,7 +240,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (user?.accessToken) {
         try {
-          await fetch('http://localhost:5001/auth/logout', {
+          await fetch(`${API_URL}/auth/logout`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
