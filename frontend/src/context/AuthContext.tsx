@@ -209,23 +209,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             prompt: 'consent',
           },
           scopes: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.compose',
-          redirectTo: `${window.location.origin}${window.location.pathname}`,
+          redirectTo: window.location.origin,  // Changed from `${window.location.origin}${window.location.pathname}`
         },
       });
-
+  
       if (error) throw error;
       
       if (!data.url) {
         throw new Error('No OAuth URL returned');
       }
-
+  
       window.location.href = data.url;
       
     } catch (error) {
       console.error('Sign in error:', error);
       throw error;
     }
-  };
+  }
 
   /**
    * Signs out the user from all sessions and clears tokens
