@@ -3,6 +3,7 @@ from flask_cors import CORS
 import logging
 import os
 import json
+import tempfile
 import pickle
 import base64
 from openai import OpenAI
@@ -46,6 +47,11 @@ def authenticate_gmail():
     """Authenticate with OAuth 2.0 and return the Gmail API service."""
     creds = None
 
+    # Get credentials file path
+    credentials_file = get_credentials_file()
+    if not credentials_file:
+        raise Exception("No credentials available - check GOOGLE_CREDENTIALS_JSON environment variable")
+
     # Try to load saved credentials
     if os.path.exists("token.pickle"):
         with open("token.pickle", "rb") as token:
@@ -57,7 +63,7 @@ def authenticate_gmail():
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
-                "credentials.json", SCOPES)
+                credentials_file, SCOPES)
             creds = flow.run_local_server(port=8080)
 
         # Save credentials for future sessions
@@ -360,9 +366,14 @@ def token_exchange():
         if not code:
             return jsonify({"error": "Authorization code is required"}), 400
             
+        # Get credentials file path
+        credentials_file = get_credentials_file()
+        if not credentials_file:
+            return jsonify({"error": "No Google credentials available"}), 500
+            
         # Create flow instance to manage the OAuth 2.0 Authorization Grant Flow
         flow = InstalledAppFlow.from_client_secrets_file(
-            "credentials.json", 
+            credentials_file, 
             SCOPES, 
             redirect_uri=redirect_uri or os.environ.get("REDIRECT_URI", "https://eply.onrender.com")
         )
@@ -398,15 +409,21 @@ def token_exchange():
         logger.error(f"Error in token exchange: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+
 @app.route('/auth/url', methods=['GET'])
 def get_auth_url():
     """Get Google OAuth authorization URL."""
     try:
         redirect_uri = request.args.get('redirect_uri', os.environ.get("REDIRECT_URI", 'https://eply.onrender.com/oauth-callback'))
         
+        # Get credentials file path
+        credentials_file = get_credentials_file()
+        if not credentials_file:
+            return jsonify({"error": "No Google credentials available"}), 500
+        
         # Create flow instance to manage the OAuth 2.0 Authorization Grant Flow
         flow = InstalledAppFlow.from_client_secrets_file(
-            "credentials.json", 
+            credentials_file, 
             SCOPES, 
             redirect_uri=redirect_uri
         )
@@ -789,6 +806,50 @@ def generate_reply_endpoint():
         logger.error(f"Error generating reply: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+def get_credentials_file():
+    """Create credentials.json file from environment variable if it doesn't exist."""
+    if os.path.exists("credentials.json"):
+        return "credentials.json"
+    
+    # Check if we have credentials in environment variable
+    credentials_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+    if credentials_json:
+        try:
+            # Create a temporary file
+            fd, temp_path = tempfile.mkstemp(suffix=".json")
+            with os.fdopen(fd, 'w') as temp:
+                temp.write(credentials_json)
+            return temp_path
+        except Exception as e:
+            logger.error(f"Error creating credentials file from environment: {str(e)}")
+    
+    # If no credentials.json exists and no env var, try using individual env vars
+    client_id = os.environ.get("GOOGLE_CLIENT_ID")
+    client_secret = os.environ.get("GOOGLE_CLIENT_SECRET")
+    
+    if client_id and client_secret:
+        try:
+            credentials_data = {
+                "web": {
+                    "client_id": client_id,
+                    "project_id": "ckvgzbldvyjizkfgqige",
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                    "client_secret": client_secret
+                }
+            }
+            
+            # Create a temporary file
+            fd, temp_path = tempfile.mkstemp(suffix=".json")
+            with os.fdopen(fd, 'w') as temp:
+                json.dump(credentials_data, temp)
+            return temp_path
+        except Exception as e:
+            logger.error(f"Error creating credentials file from individual env vars: {str(e)}")
+    
+    return None
+
 def authenticate_gmail_with_token(access_token):
     """Authenticate to Gmail API using an OAuth access token."""
     try:
@@ -798,8 +859,13 @@ def authenticate_gmail_with_token(access_token):
         import json
         import hashlib
         
-        # Load client secrets from credentials.json
-        with open("credentials.json", "r") as creds_file:
+        # Get credentials file path
+        credentials_file = get_credentials_file()
+        if not credentials_file:
+            raise Exception("No credentials available - check GOOGLE_CREDENTIALS_JSON environment variable")
+        
+        # Load client secrets from credentials file
+        with open(credentials_file, "r") as creds_file:
             creds_data = json.load(creds_file)
             
         client_id = creds_data["web"]["client_id"]

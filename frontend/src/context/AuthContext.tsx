@@ -162,9 +162,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log("Auth state changed:", event, "Session provider token:", !!session?.provider_token);
+        console.log("Auth state changed:", event, "Session:", session);
         
         if (session?.user) {
+          console.log("Provider token:", session.provider_token);
+          console.log("Access token:", session.access_token);
+          
+          // Store provider token in localStorage
+          if (session.provider_token) {
+            localStorage.setItem('gmail_provider_token', session.provider_token);
+          }
+          
           setUser({
             id: session.user.id,
             email: session.user.email || '',
@@ -172,22 +180,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             provider: session.user.app_metadata.provider,
             userMetadata: {
               ...session.user.user_metadata,
-              provider_token: session.provider_token || undefined // Ensure we store this properly
+              provider_token: session.provider_token || undefined
             }
           });
-          
-          // If we have a provider token, store it in localStorage as a backup
-          if (session.provider_token) {
-            localStorage.setItem('gmail_provider_token', session.provider_token);
-          }
         } else {
           setUser(null);
+          // Clear localStorage when user signs out
           localStorage.removeItem('gmail_provider_token');
         }
         setIsLoading(false);
       }
     );
-
+  
     return () => {
       subscription.unsubscribe();
     };
