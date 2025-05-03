@@ -86,13 +86,13 @@ function Dashboard() {
   async function fetchEmails(overrideToken?: string): Promise<void> {
     setLoading(true);
     setError(null);
-
+  
     if (!user) {
       setError("Not logged in");
       setLoading(false);
       return;
     }
-
+  
     try {
       // Use provided override token or get one from available sources
       let googleToken = overrideToken;
@@ -119,7 +119,7 @@ function Dashboard() {
         setLoading(false);
         return;
       }
-
+  
       console.log("Using token for Gmail API access", { tokenExists: !!googleToken });
       
       const response = await fetch(`${API_URL}/get-emails`, {
@@ -129,19 +129,15 @@ function Dashboard() {
           'Content-Type': 'application/json',
         },
       });
-
+  
       if (!response.ok) {
-        // More detailed error handling
-        try {
-          const errorData = await response.json();
-          throw new Error(`Failed to fetch emails: ${errorData.error || response.status}`);
-        } catch (jsonError) {
-          const errorText = await response.text();
-          throw new Error(`Failed to fetch emails: ${response.status} - ${errorText}`);
-        }
+        // Alleen de status en statusText gebruiken voor de error
+        throw new Error(`Failed to fetch emails: ${response.status} ${response.statusText}`);
       }
-
+  
+      // Lees de response één keer als JSON
       const data = await response.json();
+      
       if (Array.isArray(data.emails)) {
         setEmails(data.emails);
       } else {
@@ -234,7 +230,7 @@ function Dashboard() {
       setError("Not logged in");
       return;
     }
-
+  
     setSelectedEmail(null);
     setShowEmailModal(true);
     setLoadingEmail(true);
@@ -266,9 +262,8 @@ function Dashboard() {
       }
       
       // Create URL with query parameter for the email ID
-      // Change from 'emailId' to 'id' to match Flask server's expectation
       const url = new URL(`${API_URL}/get-email-detail`);
-      url.searchParams.append('id', emailId);  // Changed from 'emailId' to 'id'
+      url.searchParams.append('id', emailId);
       
       const response = await fetch(url.toString(), {
         method: 'GET',
@@ -277,16 +272,14 @@ function Dashboard() {
           'Content-Type': 'application/json',
         }
       });
-
+  
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("API error response for email content:", errorText);
-        throw new Error(`Failed to fetch email: ${response.status} - ${errorText}`);
+        // Alleen de status en statusText gebruiken voor de error
+        throw new Error(`Failed to fetch email: ${response.status} ${response.statusText}`);
       }
-
+  
       const data = await response.json();
       
-      // Check if the response contains the correct format
       if (!data.email || !data.email.body) {
         throw new Error("Unexpected response format from server");
       }
