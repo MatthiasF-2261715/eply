@@ -38,6 +38,11 @@ function Dashboard() {
   const [styleAnalysis, setStyleAnalysis] = useState<WritingStyleAnalysis | null>(null);
   const companyId = "default-company";
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreEmails, setHasMoreEmails] = useState(true);
+  const [pageToken, setPageToken] = useState<string | null>(null);
+  const emailsPerPage = 20; // Number of emails to display per page
+
   /**
    * Verifies if the user's token is valid and belongs to the current user
    * @returns {Promise<boolean>} True if token is valid, false otherwise
@@ -128,14 +133,17 @@ function Dashboard() {
 
   /**
    * Fetches emails from the backend server
+   * @param {string} [overrideToken] - Optional token to use instead of looking up tokens
+   * @param {number} [page] - Page number to fetch
+   * @param {string | null} [nextPageToken] - Token for the next page
    * @returns {Promise<void>}
    */
-  /**
- * Fetches emails from the backend server
- * @param {string} [overrideToken] - Optional token to use instead of looking up tokens
- * @returns {Promise<void>}
- */
-  async function fetchEmails(overrideToken?: string): Promise<void> {
+  async function fetchEmails(overrideToken?: string, page: number = 1, nextPageToken?: string | null): Promise<void> {
+    // Don't reset emails if we're loading a page other than the first one
+    if (page === 1) {
+      setEmails([]);
+    }
+    
     setLoading(true);
     setError(null);
   
@@ -174,7 +182,16 @@ function Dashboard() {
   
       console.log("Using token for Gmail API access", { tokenExists: !!googleToken });
       
-      const response = await fetch(`${API_URL}/get-emails`, {
+      // Create URL with query parameters for pagination
+      const url = new URL(`${API_URL}/get-emails`);
+      url.searchParams.append('maxResults', emailsPerPage.toString());
+      
+      // Add pageToken if we're not on the first page
+      if (nextPageToken) {
+        url.searchParams.append('pageToken', nextPageToken);
+      }
+      
+      const response = await fetch(url.toString(), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${googleToken}`,
@@ -183,15 +200,23 @@ function Dashboard() {
       });
   
       if (!response.ok) {
-        // Alleen de status en statusText gebruiken voor de error
         throw new Error(`Failed to fetch emails: ${response.status} ${response.statusText}`);
       }
   
-      // Lees de response één keer als JSON
       const data = await response.json();
       
+      // Check if we have a next page token in the response
+      const newPageToken = data.nextPageToken || null;
+      setPageToken(newPageToken);
+      setHasMoreEmails(!!newPageToken);
+      
       if (Array.isArray(data.emails)) {
-        setEmails(data.emails);
+        // If we're on a page > 1, append to existing emails instead of replacing
+        if (page > 1) {
+          setEmails(prevEmails => [...prevEmails, ...data.emails]);
+        } else {
+          setEmails(data.emails);
+        }
       } else {
         console.warn("API returned unexpected data structure:", data);
         setEmails([]);
@@ -269,7 +294,9 @@ function Dashboard() {
   const handleRefresh = (): void => {
     setEmails([]);
     setError(null);
-    fetchEmails();
+    setCurrentPage(1);
+    setPageToken(null);
+    fetchEmails(undefined, 1, null);
   };
 
   /**
@@ -349,6 +376,38 @@ function Dashboard() {
       setError(error instanceof Error ? error.message : String(error));
     } finally {
       setLoadingEmail(false);
+    }
+  };
+
+  /**
+   * Handles page changes for pagination
+   * @param {number} newPage - The new page number
+   */
+  const handlePageChange = (newPage: number): void => {
+    if (newPage === currentPage) return;
+    
+    setCurrentPage(newPage);
+    
+    if (newPage > currentPage) {
+      // We're going forward, use the pageToken
+      fetchEmails(undefined, newPage, pageToken);
+    } else {
+      // We're going backward, need to reset and fetch from start
+      // Note: Gmail API doesn't support backward pagination easily
+      // So we'll restart from page 1 and load up to the requested page
+      let token: string | null = null;
+      setCurrentPage(1);
+      
+      // This is a simple approach - ideally we'd cache previous page tokens
+      const loadPages = async () => {
+        for (let i = 1; i <= newPage; i++) {
+          await fetchEmails(undefined, i, token);
+          token = pageToken;
+          setCurrentPage(i);
+        }
+      };
+      
+      loadPages();
     }
   };
 
@@ -481,7 +540,7 @@ function Dashboard() {
         </div>
       )}
 
-      {loading ? (
+      {loading && currentPage === 1 ? (
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
@@ -522,6 +581,87 @@ function Dashboard() {
               </li>
             ))}
           </ul>
+          
+          {/* Pagination UI */}
+          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+            <div className="flex-1 flex justify-between sm:hidden">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${
+                  currentPage === 1 
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={!hasMoreEmails || loading}
+                className={`ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${
+                  !hasMoreEmails || loading
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Next
+              </button>
+            </div>
+            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-gray-700">
+                  Showing <span className="font-medium">{emails.length > 0 ? (currentPage - 1) * emailsPerPage + 1 : 0}</span> to{' '}
+                  <span className="font-medium">{(currentPage - 1) * emailsPerPage + emails.length}</span> results
+                </p>
+              </div>
+              <div>
+                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
+                      currentPage === 1 
+                        ? 'text-gray-300 cursor-not-allowed' 
+                        : 'text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="sr-only">Previous</span>
+                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  
+                  <div className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                    Page {currentPage}
+                  </div>
+                  
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={!hasMoreEmails || loading}
+                    className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
+                      !hasMoreEmails || loading 
+                        ? 'text-gray-300 cursor-not-allowed' 
+                        : 'text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="sr-only">Next</span>
+                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </nav>
+              </div>
+            </div>
+          </div>
+          
+          {/* Loading indicator for pagination */}
+          {loading && currentPage > 1 && (
+            <div className="flex justify-center items-center py-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              <span className="ml-2 text-sm text-gray-600">Loading more emails...</span>
+            </div>
+          )}
         </div>
       ) : (
         <div className="text-center py-12">

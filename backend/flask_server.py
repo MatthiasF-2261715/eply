@@ -966,6 +966,7 @@ def authenticate_gmail_with_token(access_token):
         logger.error(f"Error authenticating with token: {str(e)}")
         raise Exception(f"Authentication failed: {str(e)}")
         
+# Update the get-emails route to handle pagination
 @app.route('/get-emails', methods=['GET', 'OPTIONS'])
 def get_emails():
     """Get emails from Gmail."""
@@ -982,16 +983,31 @@ def get_emails():
         # Use token to authenticate with Gmail
         service = authenticate_gmail_with_token(access_token)
         
-        # Fetch emails (default to inbox)
+        # Get pagination parameters
         label = request.args.get('label', 'INBOX')
         max_results = int(request.args.get('maxResults', 20))
+        page_token = request.args.get('pageToken')
         
-        # Fetch messages
-        results = service.users().messages().list(userId="me", labelIds=[label], maxResults=max_results).execute()
+        # Fetch messages with optional page token
+        if page_token:
+            results = service.users().messages().list(
+                userId="me", 
+                labelIds=[label], 
+                maxResults=max_results,
+                pageToken=page_token
+            ).execute()
+        else:
+            results = service.users().messages().list(
+                userId="me", 
+                labelIds=[label], 
+                maxResults=max_results
+            ).execute()
+        
         messages = results.get("messages", [])
+        next_page_token = results.get("nextPageToken")
         
         if not messages:
-            return jsonify({"emails": []})
+            return jsonify({"emails": [], "nextPageToken": None})
         
         # Get basic info for each email
         emails = []
@@ -1007,7 +1023,10 @@ def get_emails():
                     "snippet": email_data.get("snippet", "")
                 })
         
-        return jsonify({"emails": emails})
+        return jsonify({
+            "emails": emails, 
+            "nextPageToken": next_page_token
+        })
         
     except Exception as e:
         logger.error(f"Error getting emails: {str(e)}")
