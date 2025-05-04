@@ -75,6 +75,58 @@ function Dashboard() {
   };
 
   /**
+   * Formats a date string to a user-friendly format without seconds, timezone, etc.
+   * @param {string} dateString - The date string to format
+   * @returns {string} Formatted date string
+   */
+  const formatEmailDate = (dateString: string): string => {
+    try {
+      if (!dateString) return '';
+      
+      // Parse the date string to a Date object
+      const date = new Date(dateString);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        // Try to handle common email date formats
+        if (dateString.includes(',')) {
+          // Format like: "Sun, 04 May 2025 09:26:37 +0000 (UTC)"
+          const parts = dateString.split(',');
+          if (parts.length >= 2) {
+            // Remove everything after the time (timezone, etc.)
+            const mainPart = parts[1].trim();
+            const timeParts = mainPart.split(' ');
+            if (timeParts.length >= 4) {
+              // Just keep day, month, year, and time without seconds
+              const day = timeParts[0];
+              const month = timeParts[1];
+              const year = timeParts[2];
+              const time = timeParts[3].split(':').slice(0, 2).join(':');
+              return `${day} ${month} ${year} at ${time}`;
+            }
+          }
+        }
+        return dateString; // Return original if we can't parse it
+      }
+      
+      // Format date for display: "4 May 2025 at 09:26"
+      const options: Intl.DateTimeFormatOptions = {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      };
+      
+      return date.toLocaleDateString('en-US', options).replace(',', ' at');
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return dateString; // Return original if there's an error
+    }
+  };
+
+  /**
    * Fetches emails from the backend server
    * @returns {Promise<void>}
    */
@@ -450,8 +502,8 @@ function Dashboard() {
                     <p className="text-sm font-medium text-gray-900 truncate">From: {email.from || "Unknown sender"}</p>
                     <p className="text-sm text-gray-500 truncate">{email.subject}</p>
                     <p className="text-sm text-gray-500">{email.snippet}</p>
-                  </div>
-                  <div className="flex-shrink-0 text-sm text-gray-500">{email.date}</div>
+                  </div>  
+                  <div className="flex-shrink-0 text-sm text-gray-500">{formatEmailDate(email.date)}</div>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -523,6 +575,7 @@ function Dashboard() {
       {showEmailModal && selectedEmail && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl h-[70vh] flex flex-col">
+            {/* Fixed header that won't disappear */}
             <div className="flex justify-between items-center border-b p-4">
               <h3 className="text-lg font-medium truncate">{selectedEmail.subject}</h3>
               <button
@@ -532,26 +585,32 @@ function Dashboard() {
                 Close
               </button>
             </div>
-            <div className="p-4 border-b">
+            
+            {/* Fixed metadata section */}
+            <div className="p-4 border-b bg-white">
               <div className="flex justify-between">
                 <p className="text-sm font-medium">From: {selectedEmail.from}</p>
-                <p className="text-sm text-gray-500">{selectedEmail.date}</p>
+                <p className="text-sm text-gray-500">{formatEmailDate(selectedEmail.date)}</p>
               </div>
               {selectedEmail.to && (
                 <p className="text-sm font-medium mt-1">To: {selectedEmail.to}</p>
               )}
             </div>
-            <div className="p-6 overflow-y-auto flex-grow">
+            
+            {/* Contained email content that won't affect headers */}
+            <div className="relative p-6 overflow-y-auto flex-grow">
               {loadingEmail ? (
                 <div className="flex justify-center items-center h-32">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                 </div>
               ) : selectedEmail.body ? (
-                <div className="email-container">
+                <div className="email-container relative">
                   <div 
                     key={`email-content-${selectedEmail.id}`}
-                    className="prose prose-sm max-w-none email-content" 
-                    dangerouslySetInnerHTML={{ __html: selectedEmail.body }}
+                    className="prose prose-sm max-w-none email-content"
+                    dangerouslySetInnerHTML={{ 
+                      __html: selectedEmail.body 
+                    }}
                   />
                 </div>
               ) : (
@@ -560,7 +619,9 @@ function Dashboard() {
                 </div>
               )}
             </div>
-            <div className="border-t p-4 flex justify-end space-x-4">
+            
+            {/* Fixed footer */}
+            <div className="border-t p-4 flex justify-end space-x-4 bg-white">
               <button
                 onClick={() => {
                   setShowEmailModal(false);
