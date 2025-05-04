@@ -643,55 +643,62 @@ function Dashboard() {
       {/* Email view modal */}
       {showEmailModal && selectedEmail && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl h-[70vh] flex flex-col">
-            {/* Fixed header with higher z-index and strong visibility */}
-            <div className="flex justify-between items-center border-b p-4 bg-white z-20 relative">
-              <h3 className="text-lg font-medium truncate text-gray-900">{selectedEmail.subject}</h3>
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl h-[70vh] flex flex-col overflow-hidden">
+            {/* Fixed header that stays on top - adding pointer-events-none to prevent content interference */}
+            <div className="sticky top-0 flex justify-between items-center border-b p-4 bg-white z-30 shadow-md">
+              <h3 className="text-lg font-bold truncate text-gray-900">{selectedEmail.subject}</h3>
               <button
                 onClick={() => setShowEmailModal(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-700 hover:text-gray-900 font-medium"
               >
                 Close
               </button>
             </div>
             
-            <div className="p-4 border-b bg-white z-10 relative">
-              <div className="flex justify-between">
-                <p className="text-sm font-medium text-gray-900">From: {selectedEmail.from}</p>
-                <p className="text-sm text-gray-900">{formatEmailDate(selectedEmail.date)}</p>
+            {/* Email metadata section - making this sticky too */}
+            <div className="sticky top-[72px] p-4 border-b bg-white z-20 shadow-sm">
+              <div className="flex justify-between items-start">
+                <p className="text-sm font-bold text-gray-900">From: {selectedEmail.from}</p>
+                <p className="text-sm font-medium text-gray-900 ml-2">{formatEmailDate(selectedEmail.date)}</p>
               </div>
               {selectedEmail.to && (
-                <p className="text-sm font-medium mt-1 text-gray-900">To: {selectedEmail.to}</p>
+                <p className="text-sm font-bold mt-1 text-gray-900">To: {selectedEmail.to}</p>
               )}
             </div>
             
-            {/* Content wrapper with isolation to prevent styles from leaking */}
-            <div className="relative p-6 overflow-y-auto flex-grow z-0 isolate">
-              {loadingEmail ? (
-                <div className="flex justify-center items-center h-32">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                </div>
-              ) : selectedEmail.body ? (
-                <div className="email-container relative"> 
-                  {/* Add a style reset to prevent external styles from affecting our container */}
-                  <div 
-                    key={`email-content-${selectedEmail.id}`}
-                    className="prose prose-sm max-w-none email-content"
-                    style={{ isolation: 'isolate' }} // Add CSS isolation
-                    dangerouslySetInnerHTML={{ 
-                      __html: selectedEmail.body 
-                    }}
-                  />
-                </div>
-              ) : (
-                <div className="text-center text-gray-500 py-8">
-                  <p>Loading email content...</p>
-                </div>
-              )}
+            {/* Isolate the email content in its own scrollable container */}
+            <div className="relative flex-grow overflow-auto" style={{ contain: 'content' }}>
+              <div className="p-6">
+                {loadingEmail ? (
+                  <div className="flex justify-center items-center h-32">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : selectedEmail.body ? (
+                  <div className="email-container"> 
+                    {/* Add more isolation techniques */}
+                    <div 
+                      key={`email-content-${selectedEmail.id}`}
+                      className="prose prose-sm max-w-none email-content"
+                      style={{ 
+                        isolation: 'isolate',
+                        position: 'relative',
+                        zIndex: 1
+                      }}
+                      dangerouslySetInnerHTML={{ 
+                        __html: selectedEmail.body 
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center text-gray-500 py-8">
+                    <p>Loading email content...</p>
+                  </div>
+                )}
+              </div>
             </div>
             
-            {/* Fixed footer with z-index */}
-            <div className="border-t p-4 flex justify-end space-x-4 bg-white z-10 relative">
+            {/* Footer that stays at the bottom */}
+            <div className="sticky bottom-0 border-t p-4 flex justify-end space-x-4 bg-white z-20 shadow-md">
               <button
                 onClick={() => {
                   setShowEmailModal(false);
