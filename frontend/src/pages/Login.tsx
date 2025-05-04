@@ -34,7 +34,7 @@ function Login() {
           <div className="flex justify-center mb-4">
             <Mail className="h-12 w-12 text-blue-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900">Sign in to EmailAI</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Sign in to Eply</h2>
           <p className="mt-2 text-gray-600">
             Connect your Gmail account to start automating your email responses
           </p>

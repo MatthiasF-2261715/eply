@@ -27,7 +27,7 @@ function NavBar() {
       <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 flex justify-between items-center">
         <div className="flex items-center space-x-2">
           <Mail className="h-6 w-6 text-blue-600" />
-          <span className="text-xl font-bold text-gray-900">EmailAI</span>
+          <span className="text-xl font-bold text-gray-900">Eply</span>
         </div>
         <nav className="flex items-center space-x-8">
           <a href="/" className="text-gray-600 hover:text-gray-900">Home</a>

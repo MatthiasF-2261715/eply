@@ -522,7 +522,7 @@ function Dashboard() {
       {/* Email view modal */}
       {showEmailModal && selectedEmail && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[120vh] flex flex-col">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl h-[70vh] flex flex-col">
             <div className="flex justify-between items-center border-b p-4">
               <h3 className="text-lg font-medium truncate">{selectedEmail.subject}</h3>
               <button
