@@ -655,11 +655,10 @@ function Dashboard() {
               </button>
             </div>
             
-            {/* Fixed metadata section with higher z-index */}
             <div className="p-4 border-b bg-white z-10 relative">
               <div className="flex justify-between">
                 <p className="text-sm font-medium text-gray-900">From: {selectedEmail.from}</p>
-                <p className="text-sm text-gray-500">{formatEmailDate(selectedEmail.date)}</p>
+                <p className="text-sm text-gray-900">{formatEmailDate(selectedEmail.date)}</p>
               </div>
               {selectedEmail.to && (
                 <p className="text-sm font-medium mt-1 text-gray-900">To: {selectedEmail.to}</p>
