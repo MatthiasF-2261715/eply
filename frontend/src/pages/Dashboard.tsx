@@ -575,9 +575,9 @@ function Dashboard() {
       {showEmailModal && selectedEmail && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl h-[70vh] flex flex-col">
-            {/* Fixed header that won't disappear */}
-            <div className="flex justify-between items-center border-b p-4">
-              <h3 className="text-lg font-medium truncate">{selectedEmail.subject}</h3>
+            {/* Fixed header with higher z-index and strong visibility */}
+            <div className="flex justify-between items-center border-b p-4 bg-white z-20 relative">
+              <h3 className="text-lg font-medium truncate text-gray-900">{selectedEmail.subject}</h3>
               <button
                 onClick={() => setShowEmailModal(false)}
                 className="text-gray-500 hover:text-gray-700"
@@ -586,28 +586,30 @@ function Dashboard() {
               </button>
             </div>
             
-            {/* Fixed metadata section */}
-            <div className="p-4 border-b bg-white">
+            {/* Fixed metadata section with higher z-index */}
+            <div className="p-4 border-b bg-white z-10 relative">
               <div className="flex justify-between">
-                <p className="text-sm font-medium">From: {selectedEmail.from}</p>
+                <p className="text-sm font-medium text-gray-900">From: {selectedEmail.from}</p>
                 <p className="text-sm text-gray-500">{formatEmailDate(selectedEmail.date)}</p>
               </div>
               {selectedEmail.to && (
-                <p className="text-sm font-medium mt-1">To: {selectedEmail.to}</p>
+                <p className="text-sm font-medium mt-1 text-gray-900">To: {selectedEmail.to}</p>
               )}
             </div>
             
-            {/* Contained email content that won't affect headers */}
-            <div className="relative p-6 overflow-y-auto flex-grow">
+            {/* Content wrapper with isolation to prevent styles from leaking */}
+            <div className="relative p-6 overflow-y-auto flex-grow z-0 isolate">
               {loadingEmail ? (
                 <div className="flex justify-center items-center h-32">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                 </div>
               ) : selectedEmail.body ? (
-                <div className="email-container relative">
+                <div className="email-container relative"> 
+                  {/* Add a style reset to prevent external styles from affecting our container */}
                   <div 
                     key={`email-content-${selectedEmail.id}`}
                     className="prose prose-sm max-w-none email-content"
+                    style={{ isolation: 'isolate' }} // Add CSS isolation
                     dangerouslySetInnerHTML={{ 
                       __html: selectedEmail.body 
                     }}
@@ -620,8 +622,8 @@ function Dashboard() {
               )}
             </div>
             
-            {/* Fixed footer */}
-            <div className="border-t p-4 flex justify-end space-x-4 bg-white">
+            {/* Fixed footer with z-index */}
+            <div className="border-t p-4 flex justify-end space-x-4 bg-white z-10 relative">
               <button
                 onClick={() => {
                   setShowEmailModal(false);
