@@ -124,6 +124,10 @@ def decode_email_body(payload):
         decoded_bytes = base64.urlsafe_b64decode(data)
         body = decoded_bytes.decode('utf-8', errors='replace')
         
+        # Handle HTML entities properly
+        import html
+        body = html.unescape(body)
+        
         # Handle email MIME types
         mime_type = payload.get('mimeType', '').lower()
         if 'html' in mime_type:

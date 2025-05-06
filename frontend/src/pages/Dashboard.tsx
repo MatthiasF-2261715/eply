@@ -45,6 +45,53 @@ function Dashboard() {
   const emailsPerRequest = 20; // Number of emails to fetch per request
 
   /**
+   * Decodes HTML entities in a string
+   * @param {string} text - The text to decode
+   * @returns {string} Decoded text
+   */
+  const decodeHTMLEntities = (text: string) => {
+    if (!text) return '';
+    
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = text;
+    return textarea.value;
+  };
+
+  /**
+   * Cleans up email snippet text
+   * @param {string} snippet - The snippet text to clean
+   * @returns {string} Cleaned snippet text
+   */
+  const cleanSnippet = (snippet: string): string => {
+    if (!snippet) return '';
+    
+    // Unescape HTML entities
+    const parser = new DOMParser();
+    let cleaned = parser.parseFromString(snippet, 'text/html').documentElement.textContent || '';
+  
+    // Remove any weird character sequences
+    cleaned = cleaned.replace(/&#\d+;/g, '').replace(/&[a-zA-Z]+;/g, '');
+    
+    return cleaned;
+  };
+
+  /**
+   * Sanitizes email HTML content
+   * @param {string} html - The HTML content to sanitize
+   * @returns {string} Sanitized HTML content
+   */
+  const sanitizeEmailHTML = (html: string) => {
+    if (!html) return '';
+    
+    // Replace problematic HTML entities
+    return html
+      .replace(/&apos;/g, "'")
+      .replace(/&#39;/g, "'")
+      .replace(/&quot;/g, '"')
+      .replace(/&#x27;/g, "'");
+  };
+
+  /**
    * Verifies if the user's token is valid and belongs to the current user
    * @returns {Promise<boolean>} True if token is valid, false otherwise
    */
@@ -222,10 +269,16 @@ function Dashboard() {
       if (Array.isArray(data.emails)) {
         // If loading more, append to existing emails
         if (isLoadingMore) {
-          setEmails(prevEmails => [...prevEmails, ...data.emails]);
+          setEmails(prevEmails => [...prevEmails, ...data.emails.map((email: any) => ({
+            ...email,
+            snippet: cleanSnippet(email.snippet || '')
+          }))]);
           setTotalEmailsLoaded(prev => prev + data.emails.length);
         } else {
-          setEmails(data.emails);
+          setEmails(data.emails.map((email: any) => ({
+            ...email,
+            snippet: cleanSnippet(email.snippet || '')
+          })));
           setTotalEmailsLoaded(data.emails.length);
         }
       } else {
@@ -600,7 +653,7 @@ function Dashboard() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">From: {email.from || "Unknown sender"}</p>
                     <p className="text-sm text-gray-500 truncate">{email.subject}</p>
-                    <p className="text-sm text-gray-500">{email.snippet}</p>
+                    <p className="text-sm text-gray-500">{decodeHTMLEntities(email.snippet)}</p>
                   </div>  
                   <div className="flex-shrink-0 text-sm text-gray-500">{formatEmailDate(email.date)}</div>
                   <button
@@ -742,7 +795,7 @@ function Dashboard() {
                         zIndex: 1
                       }}
                       dangerouslySetInnerHTML={{ 
-                        __html: selectedEmail.body 
+                        __html: sanitizeEmailHTML(selectedEmail.body) 
                       }}
                     />
                   </div>
