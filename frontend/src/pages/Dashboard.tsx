@@ -189,6 +189,7 @@ function Dashboard() {
       // Create URL with query parameters
       const url = new URL(`${API_URL}/get-emails`);
       url.searchParams.append('maxResults', emailsPerRequest.toString());
+      // Removed label parameter to get all emails
       
       // Add pageToken if we're loading more
       if (isLoadingMore && nextPageToken) {

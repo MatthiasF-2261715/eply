@@ -984,7 +984,7 @@ def get_emails():
         service = authenticate_gmail_with_token(access_token)
         
         # Get pagination parameters
-        label = request.args.get('label', 'INBOX')
+        # Remove specific label to fetch ALL emails instead of just INBOX
         max_results = int(request.args.get('maxResults', 20))
         page_token = request.args.get('pageToken')
         
@@ -992,15 +992,13 @@ def get_emails():
         if page_token:
             results = service.users().messages().list(
                 userId="me", 
-                labelIds=[label], 
-                maxResults=max_results,
+                maxResults=max_results,  # Removed labelIds parameter to get all emails
                 pageToken=page_token
             ).execute()
         else:
             results = service.users().messages().list(
                 userId="me", 
-                labelIds=[label], 
-                maxResults=max_results
+                maxResults=max_results  # Removed labelIds parameter to get all emails
             ).execute()
         
         messages = results.get("messages", [])
@@ -1031,7 +1029,7 @@ def get_emails():
     except Exception as e:
         logger.error(f"Error getting emails: {str(e)}")
         return jsonify({"error": str(e)}), 500
-
+        
 @app.route('/get-sent-emails', methods=['GET', 'OPTIONS'])
 def get_sent_emails():
     """Get sent emails from Gmail."""
