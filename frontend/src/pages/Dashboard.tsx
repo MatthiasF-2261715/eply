@@ -26,7 +26,7 @@ interface WritingStyleAnalysis {
 function Dashboard() {
   const [emails, setEmails] = useState<Email[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [showReplyModal, setShowReplyModal] = useState(false);
   const [generatedReply, setGeneratedReply] = useState('');
@@ -41,6 +41,7 @@ function Dashboard() {
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [totalEmailsLoaded, setTotalEmailsLoaded] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [tokenError, setTokenError] = useState<boolean>(false);
   const emailsPerRequest = 20; // Number of emails to fetch per request
 
   /**
@@ -146,6 +147,7 @@ function Dashboard() {
     
     isLoadingMore ? setLoadingMore(true) : setLoading(true);
     setError(null);
+    setTokenError(false);
   
     if (!user) {
       setError("Not logged in");
@@ -202,6 +204,12 @@ function Dashboard() {
       });
   
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          // Token is invalid or expired
+          console.error("Gmail credentials are invalid or expired");
+          setTokenError(true);
+          throw new Error("Your Gmail access has expired. Please login again.");
+        }
         throw new Error(`Failed to fetch emails: ${response.status} ${response.statusText}`);
       }
   
@@ -229,6 +237,14 @@ function Dashboard() {
     } catch (error) {
       console.error('Error fetching emails:', error);
       setError(error instanceof Error ? error.message : String(error));
+      
+      // If we detected a token error earlier, handle automatic logout
+      if (tokenError) {
+        console.log("Initiating automatic logout due to invalid Gmail credentials");
+        setTimeout(() => {
+          if (signOut) signOut();
+        }, 2000);
+      }
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -268,6 +284,12 @@ function Dashboard() {
       });
   
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          // Token is invalid or expired
+          setTokenError(true);
+          throw new Error("Your Gmail access has expired. Please login again.");
+        }
+        
         const errorText = await response.text();
         console.error("API error response for reply generation:", errorText);
         throw new Error(`Failed to generate reply: ${response.status} - ${errorText}`);
@@ -288,6 +310,13 @@ function Dashboard() {
     } catch (error) {
       console.error('Error generating reply:', error);
       setError(error instanceof Error ? error.message : String(error));
+      
+      // If we detected a token error, handle automatic logout
+      if (tokenError) {
+        setTimeout(() => {
+          if (signOut) signOut();
+        }, 2000);
+      }
     } finally {
       setGeneratingReply(null);
     }
@@ -359,6 +388,11 @@ function Dashboard() {
       });
   
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          // Token is invalid or expired
+          setTokenError(true);
+          throw new Error("Your Gmail access has expired. Please login again.");
+        }
         // Alleen de status en statusText gebruiken voor de error
         throw new Error(`Failed to fetch email: ${response.status} ${response.statusText}`);
       }
@@ -380,6 +414,13 @@ function Dashboard() {
     } catch (error) {
       console.error('Error fetching email:', error);
       setError(error instanceof Error ? error.message : String(error));
+      
+      // If we detected a token error, handle automatic logout
+      if (tokenError) {
+        setTimeout(() => {
+          if (signOut) signOut();
+        }, 2000);
+      }
     } finally {
       setLoadingEmail(false);
     }
@@ -501,6 +542,21 @@ function Dashboard() {
       clearTimeout(timer);
     };
   }, [user]);
+
+  // Add effect to watch for token errors and trigger logout
+  useEffect(() => {
+    if (tokenError && user) {
+      // Show a friendly message before logout
+      setError("Your Gmail access has expired. Logging you out...");
+      
+      // Delay logout slightly to show the message
+      const timer = setTimeout(() => {
+        signOut();
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [tokenError, user, signOut]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
