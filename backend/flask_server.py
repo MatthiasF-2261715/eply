@@ -15,6 +15,8 @@ from email.mime.text import MIMEText
 import re
 import datetime
 from dotenv import load_dotenv
+import threading
+import time
 
 # Load environment variables
 load_dotenv()
@@ -42,6 +44,9 @@ SCOPES = ["https://www.googleapis.com/auth/gmail.readonly",
 # Google OAuth credentials
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
+
+# Dictionary to store user tokens and preferences
+user_token_cache = {}
 
 def authenticate_gmail():
     """Authenticate with OAuth 2.0 and return the Gmail API service."""
@@ -73,6 +78,161 @@ def authenticate_gmail():
     # Create the Gmail service
     service = build("gmail", "v1", credentials=creds)
     return service
+
+# Add new background processing functionality
+def background_email_checker():
+    """Background thread that checks for new emails and generates drafts."""
+    while True:
+        try:
+            current_time = time.time()
+            users_to_process = []
+            
+            # Find users with auto-drafts enabled
+            with user_cache_lock:
+                for user_email, user_data in user_token_cache.items():
+                    if user_data.get('auto_drafts_enabled', False) and current_time - user_data.get('last_check', 0) > 300:  # Check every 5 minutes
+                        users_to_process.append((user_email, user_data))
+                        user_token_cache[user_email]['last_check'] = current_time
+            
+            # Process each user's emails
+            for user_email, user_data in users_to_process:
+                try:
+                    access_token = user_data.get('access_token')
+                    if not access_token:
+                        continue
+                        
+                    # Use token to authenticate with Gmail
+                    service = authenticate_gmail_with_token(access_token)
+                    
+                    # Get recent unread emails
+                    results = service.users().messages().list(
+                        userId="me", 
+                        q="is:unread",
+                        maxResults=10
+                    ).execute()
+                    
+                    messages = results.get("messages", [])
+                    
+                    for msg in messages:
+                        # Check if we've already processed this message
+                        msg_id = msg["id"]
+                        if msg_id in user_data.get('processed_emails', set()):
+                            continue
+                            
+                        # Get email content
+                        email_data = get_email_content(service, msg_id)
+                        
+                        if not email_data:
+                            continue
+                            
+                        # Generate reply
+                        sender_name = extract_sender_name(email_data)
+                        
+                        # Analyze user's writing style
+                        style_analysis = user_data.get('style_analysis')
+                        
+                        if not style_analysis:
+                            # Get sent emails for analysis
+                            results = service.users().messages().list(
+                                userId="me", 
+                                labelIds=["SENT"], 
+                                maxResults=30
+                            ).execute()
+                            
+                            sent_msgs = results.get("messages", [])
+                            sent_emails = []
+                            
+                            for sent_msg in sent_msgs[:30]:
+                                sent_data = get_email_content(service, sent_msg["id"])
+                                if sent_data:
+                                    sent_emails.append(sent_data)
+                                    
+                            if sent_emails:
+                                style_analysis = analyze_writing_style(sent_emails)
+                                
+                                # Cache the style analysis
+                                with user_cache_lock:
+                                    if user_email in user_token_cache:
+                                        user_token_cache[user_email]['style_analysis'] = style_analysis
+                        
+                        # Generate reply text
+                        reply_text = generate_reply(email_data.get("body", ""), style_analysis)
+                        
+                        if reply_text:
+                            # Create draft in Gmail
+                            message = MIMEMultipart()
+                            message["to"] = email_data["from"]
+                            message["from"] = "me"
+                            message["subject"] = "Re: " + email_data["subject"]
+                            
+                            msg = MIMEText(reply_text)
+                            message.attach(msg)
+                            
+                            raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+                            body = {'message': {'raw': raw}}
+                            draft = service.users().drafts().create(userId="me", body=body).execute()
+                            
+                            # Mark as processed
+                            with user_cache_lock:
+                                if user_email in user_token_cache:
+                                    if 'processed_emails' not in user_token_cache[user_email]:
+                                        user_token_cache[user_email]['processed_emails'] = set()
+                                    user_token_cache[user_email]['processed_emails'].add(msg_id)
+                                    
+                            logger.info(f"Auto-generated draft for user {user_email}, email ID {msg_id}")
+                
+                except Exception as e:
+                    logger.error(f"Error processing emails for user {user_email}: {str(e)}")
+                    
+        except Exception as e:
+            logger.error(f"Error in background email checker: {str(e)}")
+            
+        # Sleep for 1 minute before next check
+        time.sleep(60)
+
+# Start background thread
+user_cache_lock = threading.Lock()
+background_thread = threading.Thread(target=background_email_checker, daemon=True)
+background_thread.start()
+
+# Add new endpoints for managing auto-draft settings
+@app.route('/set-auto-drafts', methods=['POST'])
+def set_auto_drafts():
+    """Enable or disable automatic draft generation for a user."""
+    try:
+        # Extract token from Authorization header
+        access_token = extract_token(request)
+        if not access_token:
+            return jsonify({"error": "Missing or invalid authorization token"}), 401
+            
+        data = request.json
+        enabled = data.get('enabled', False)
+        
+        # Get user email from token
+        try:
+            service = authenticate_gmail_with_token(access_token)
+            profile = service.users().getProfile(userId="me").execute()
+            user_email = profile.get('emailAddress', 'unknown')
+            
+            # Update user preferences
+            with user_cache_lock:
+                if user_email not in user_token_cache:
+                    user_token_cache[user_email] = {}
+                    
+                user_token_cache[user_email]['access_token'] = access_token
+                user_token_cache[user_email]['auto_drafts_enabled'] = enabled
+                user_token_cache[user_email]['last_check'] = time.time()
+                
+            return jsonify({"success": True, "enabled": enabled})
+            
+        except Exception as e:
+            logger.error(f"Error identifying user: {str(e)}")
+            return jsonify({"error": "Could not identify user"}), 401
+            
+    except Exception as e:
+        logger.error(f"Error setting auto-drafts: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 
 def decode_email_body(payload):
     """Recursively decode email body parts."""

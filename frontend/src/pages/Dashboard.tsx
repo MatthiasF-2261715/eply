@@ -44,6 +44,67 @@ function Dashboard() {
   const [tokenError, setTokenError] = useState<boolean>(false);
   const emailsPerRequest = 20; // Number of emails to fetch per request
 
+  const [autoDraftsEnabled, setAutoDraftsEnabled] = useState(false);
+  const [loadingAutoSetting, setLoadingAutoSetting] = useState(false);
+
+  const toggleAutoDrafts = async () => {
+    try {
+      setLoadingAutoSetting(true);
+      
+      // Make sure we have a valid user with access token
+      if (!user || !user.accessToken) {
+        throw new Error("Not authenticated");
+      }
+      
+      const newSetting = !autoDraftsEnabled;
+      
+      const response = await fetch(`${API_URL}/set-auto-drafts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.accessToken}`,
+        },
+        body: JSON.stringify({ enabled: newSetting }),
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to update settings");
+      }
+      
+      setAutoDraftsEnabled(newSetting);
+      
+    } catch (error) {
+      console.error('Error updating auto-drafts setting:', error);
+      setError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setLoadingAutoSetting(false);
+    }
+  };
+
+  useEffect(() => {
+    const checkAutoSetting = async () => {
+      try {
+        if (!user || !user.accessToken) return;
+        
+        const response = await fetch(`${API_URL}/get-auto-drafts-status`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${user.accessToken}`,
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setAutoDraftsEnabled(data.enabled);
+        }
+      } catch (error) {
+        console.error('Error fetching auto-drafts setting:', error);
+      }
+    };
+    
+    checkAutoSetting();
+  }, [user]);
+
   /**
    * Decodes HTML entities in a string
    * @param {string} text - The text to decode
@@ -719,6 +780,33 @@ function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Add a new toggle for enabling auto-drafts */}
+      <div className="mt-6 bg-white shadow overflow-hidden sm:rounded-md p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-medium text-gray-900">Automatic Draft Generation</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              When enabled, Eply will automatically generate draft replies for new incoming emails.
+            </p>
+          </div>
+          <label className="flex items-center cursor-pointer">
+            <span className="mr-3 text-sm font-medium text-gray-700">
+              {autoDraftsEnabled ? 'Enabled' : 'Disabled'}
+            </span>
+            <div className="relative">
+              <input 
+                type="checkbox" 
+                className="sr-only" 
+                checked={autoDraftsEnabled}
+                onChange={toggleAutoDrafts}
+              />
+              <div className={`block w-14 h-8 rounded-full ${autoDraftsEnabled ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+              <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition transform ${autoDraftsEnabled ? 'translate-x-6' : ''}`}></div>
+            </div>
+          </label>
+        </div>
+      </div>
 
       {/* Email reply modal */}
       {showReplyModal && (
