@@ -71,25 +71,47 @@ function Dashboard() {
         accessToken = providerToken;
       }
       
+      // Get refresh token if available from localStorage
+      const refreshToken = localStorage.getItem('gmail_refresh_token');
+      
+      // Prepare request payload
+      const payload: { enabled: boolean; refresh_token?: string } = { 
+        enabled: newSetting 
+      };
+      
+      // Only include refresh token if available
+      if (refreshToken) {
+        payload.refresh_token = refreshToken;
+      }
+      
+      console.log("Sending auto-drafts toggle request with payload:", 
+        { hasToken: !!accessToken, hasRefreshToken: !!refreshToken, enabled: newSetting });
+      
       const response = await fetch(`${API_URL}/set-auto-drafts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({ 
-          enabled: newSetting,
-          // Include refresh token if available in local storage
-          refresh_token: localStorage.getItem('gmail_refresh_token')
-        }),
+        body: JSON.stringify(payload),
       });
       
+      // Check if the response is OK
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Server response:', errorData);
-        throw new Error(errorData.error || "Failed to update settings");
+        const errorText = await response.text();
+        console.error('Server response error:', errorText);
+        
+        try {
+          // Try to parse error as JSON
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.error || "Failed to update settings");
+        } catch (jsonError) {
+          // If can't parse as JSON, use text directly
+          throw new Error(`Failed to update settings: ${errorText}`);
+        }
       }
       
+      // Parse the successful response
       const responseData = await response.json();
       console.log('Auto-drafts setting updated successfully:', responseData);
       setAutoDraftsEnabled(newSetting);
@@ -98,10 +120,10 @@ function Dashboard() {
       console.error('Error updating auto-drafts setting:', error);
       setError(error instanceof Error ? error.message : String(error));
       
-      // Show error for 3 seconds, then clear
+      // Show error for 5 seconds, then clear
       setTimeout(() => {
         setError(null);
-      }, 3000);
+      }, 5000);
     } finally {
       setLoadingAutoSetting(false);
     }
@@ -122,6 +144,9 @@ function Dashboard() {
           accessToken = providerToken;
         }
         
+        console.log("Checking auto-drafts status with token:", 
+          { hasToken: !!accessToken, hasRefreshToken: !!refreshToken });
+        
         const headers: HeadersInit = {
           'Authorization': `Bearer ${accessToken}`,
         };
@@ -138,12 +163,17 @@ function Dashboard() {
         
         if (response.ok) {
           const data = await response.json();
+          console.log("Auto-drafts status received:", data);
           setAutoDraftsEnabled(data.enabled);
         } else {
-          console.error('Failed to get auto-drafts status:', await response.text());
+          const errorText = await response.text();
+          console.error('Failed to get auto-drafts status:', errorText);
+          
+          // Don't show error to user for status check, just log it
         }
       } catch (error) {
         console.error('Error fetching auto-drafts setting:', error);
+        // Don't show error to user for status check, just log it
       }
     };
     

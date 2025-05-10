@@ -214,8 +214,7 @@ user_cache_lock = threading.Lock()
 background_thread = threading.Thread(target=background_email_checker, daemon=True)
 background_thread.start()
 
-# Add new endpoints for managing auto-draft settings
-# Improve the set-auto-drafts route
+# Update the set-auto-drafts route to make refresh token optional
 
 @app.route('/set-auto-drafts', methods=['POST'])
 def set_auto_drafts():
@@ -232,37 +231,19 @@ def set_auto_drafts():
         
         logger.info(f"Setting auto-drafts to {enabled}, refresh token available: {bool(refresh_token)}")
         
-        # Get credentials file path
-        credentials_file = get_credentials_file()
-        if not credentials_file:
-            return jsonify({"error": "No credentials available - check environment variables"}), 500
-            
-        # Load client secrets from credentials file
-        with open(credentials_file, "r") as creds_file:
-            creds_data = json.load(creds_file)
-            
-        client_id = creds_data["web"]["client_id"]
-        client_secret = creds_data["web"]["client_secret"]
-        token_uri = creds_data["web"]["token_uri"]
-        
-        # Create credentials
+        # Create a simple credentials object without refresh capabilities
+        from googleapiclient.discovery import build
         from google.oauth2.credentials import Credentials
         
-        creds = Credentials(
-            token=access_token,
-            refresh_token=refresh_token,
-            client_id=client_id,
-            client_secret=client_secret,
-            token_uri=token_uri,
-            scopes=SCOPES
-        )
+        # Create credentials with just the access token (no refresh capability)
+        creds = Credentials(token=access_token)
         
-        # Create service and get user profile
+        # Try to use the token as-is
         service = build("gmail", "v1", credentials=creds)
         profile = service.users().getProfile(userId="me").execute()
         user_email = profile.get('emailAddress', 'unknown')
         
-        logger.info(f"Successfully identified user: {user_email} for auto-drafts setting")
+        logger.info(f"Successfully identified user for auto-drafts toggle: {user_email}")
         
         # Update user preferences
         with user_cache_lock:
@@ -270,18 +251,30 @@ def set_auto_drafts():
                 user_token_cache[user_email] = {}
                 
             user_token_cache[user_email]['access_token'] = access_token
-            
-            # Store refresh token if available
-            if refresh_token:
-                user_token_cache[user_email]['refresh_token'] = refresh_token
-                
             user_token_cache[user_email]['auto_drafts_enabled'] = enabled
             user_token_cache[user_email]['last_check'] = time.time()
             
-            # Store client credentials
-            user_token_cache[user_email]['client_id'] = client_id
-            user_token_cache[user_email]['client_secret'] = client_secret
-            user_token_cache[user_email]['token_uri'] = token_uri
+            # Only try to store refresh token data if available
+            if refresh_token:
+                user_token_cache[user_email]['refresh_token'] = refresh_token
+                
+                # Try to load client secrets from credentials file if refresh token is available
+                try:
+                    credentials_file = get_credentials_file()
+                    if credentials_file:
+                        with open(credentials_file, "r") as creds_file:
+                            creds_data = json.load(creds_file)
+                            
+                        client_id = creds_data["web"]["client_id"]
+                        client_secret = creds_data["web"]["client_secret"]
+                        token_uri = creds_data["web"]["token_uri"]
+                        
+                        user_token_cache[user_email]['client_id'] = client_id
+                        user_token_cache[user_email]['client_secret'] = client_secret
+                        user_token_cache[user_email]['token_uri'] = token_uri
+                except Exception as e:
+                    logger.warning(f"Could not load client secrets for refresh: {str(e)}")
+                    # Continue without refresh capability
             
         return jsonify({"success": True, "enabled": enabled})
             
@@ -574,7 +567,8 @@ def extract_sender_name(email_data):
         logger.error(f"Error extracting sender name: {str(e)}")
         return ""
 
-# Improve the get-auto-drafts-status route
+
+# Update the get-auto-drafts-status route to handle missing refresh token
 
 @app.route('/get-auto-drafts-status', methods=['GET'])
 def get_auto_drafts_status():
@@ -586,38 +580,19 @@ def get_auto_drafts_status():
             return jsonify({"error": "Missing or invalid authorization token"}), 401
         
         try:
-            # Get credentials file path
-            credentials_file = get_credentials_file()
-            if not credentials_file:
-                return jsonify({"error": "No credentials available - check environment variables"}), 500
-                
-            # Load client secrets from credentials file
-            with open(credentials_file, "r") as creds_file:
-                creds_data = json.load(creds_file)
-                
-            client_id = creds_data["web"]["client_id"]
-            client_secret = creds_data["web"]["client_secret"]
-            token_uri = creds_data["web"]["token_uri"]
-            
-            # Create credentials
+            # Get the user email directly from the token without trying to refresh
+            from googleapiclient.discovery import build
             from google.oauth2.credentials import Credentials
             
-            # Get refresh token from localStorage if available
-            refresh_token = request.headers.get('X-Refresh-Token')
+            # Create a simpler credential object without refresh capabilities
+            creds = Credentials(token=access_token)
             
-            creds = Credentials(
-                token=access_token,
-                refresh_token=refresh_token,
-                client_id=client_id,
-                client_secret=client_secret,
-                token_uri=token_uri,
-                scopes=SCOPES
-            )
-            
-            # Create service and get user profile
+            # Try to use the token as-is without refresh capabilities
             service = build("gmail", "v1", credentials=creds)
             profile = service.users().getProfile(userId="me").execute()
             user_email = profile.get('emailAddress', 'unknown')
+            
+            logger.info(f"Successfully identified user for auto-drafts status: {user_email}")
             
             # Check if user has auto-drafts setting
             with user_cache_lock:
@@ -628,18 +603,15 @@ def get_auto_drafts_status():
                     # User not found in cache, create entry with default disabled
                     user_token_cache[user_email] = {
                         'access_token': access_token,
-                        'refresh_token': refresh_token,
-                        'client_id': client_id,
-                        'client_secret': client_secret,
-                        'token_uri': token_uri,
                         'auto_drafts_enabled': False,
                         'last_check': time.time()
                     }
+                    # Don't try to store refresh capability data
                     return jsonify({"enabled": False})
                 
         except Exception as e:
             logger.error(f"Error identifying user: {str(e)}")
-            return jsonify({"error": str(e)}), 401
+            return jsonify({"error": f"Could not identify user: {str(e)}"}), 401
             
     except Exception as e:
         logger.error(f"Error getting auto-drafts status: {str(e)}")
