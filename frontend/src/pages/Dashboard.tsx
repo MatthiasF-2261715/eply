@@ -781,7 +781,6 @@ function Dashboard() {
         </div>
       )}
 
-      {/* Add a new toggle for enabling auto-drafts */}
       <div className="mt-6 bg-white shadow overflow-hidden sm:rounded-md p-4">
         <div className="flex items-center justify-between">
           <div>
@@ -790,21 +789,32 @@ function Dashboard() {
               When enabled, Eply will automatically generate draft replies for new incoming emails.
             </p>
           </div>
-          <label className="flex items-center cursor-pointer">
+          <div className="flex items-center">
             <span className="mr-3 text-sm font-medium text-gray-700">
               {autoDraftsEnabled ? 'Enabled' : 'Disabled'}
             </span>
-            <div className="relative">
-              <input 
-                type="checkbox" 
-                className="sr-only" 
-                checked={autoDraftsEnabled}
-                onChange={toggleAutoDrafts}
+            <button
+              onClick={toggleAutoDrafts}
+              disabled={loadingAutoSetting}
+              className="relative inline-flex h-8 w-14 items-center rounded-full focus:outline-none"
+              aria-pressed={autoDraftsEnabled}
+            >
+              <span className="sr-only">Toggle automatic drafts</span>
+              <span 
+                className={`${autoDraftsEnabled ? 'bg-blue-600' : 'bg-gray-300'} 
+                  absolute h-8 w-14 mx-auto rounded-full transition-colors ease-in-out duration-200`}
               />
-              <div className={`block w-14 h-8 rounded-full ${autoDraftsEnabled ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
-              <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition transform ${autoDraftsEnabled ? 'translate-x-6' : ''}`}></div>
-            </div>
-          </label>
+              <span 
+                className={`${autoDraftsEnabled ? 'translate-x-6' : 'translate-x-1'} 
+                  inline-block h-6 w-6 transform rounded-full bg-white transition ease-in-out duration-200 shadow-md`}
+              />
+              {loadingAutoSetting && (
+                <span className="absolute inset-0 flex items-center justify-center">
+                  <span className="animate-spin h-4 w-4 border-b-2 border-white rounded-full"></span>
+                </span>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 

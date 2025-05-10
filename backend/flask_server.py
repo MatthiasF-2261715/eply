@@ -519,6 +519,43 @@ def extract_sender_name(email_data):
         logger.error(f"Error extracting sender name: {str(e)}")
         return ""
 
+@app.route('/get-auto-drafts-status', methods=['GET'])
+def get_auto_drafts_status():
+    """Get the current automatic draft generation status for a user."""
+    try:
+        # Extract token from Authorization header
+        access_token = extract_token(request)
+        if not access_token:
+            return jsonify({"error": "Missing or invalid authorization token"}), 401
+        
+        # Get user email from token
+        try:
+            service = authenticate_gmail_with_token(access_token)
+            profile = service.users().getProfile(userId="me").execute()
+            user_email = profile.get('emailAddress', 'unknown')
+            
+            # Check if user has auto-drafts setting
+            with user_cache_lock:
+                if user_email in user_token_cache:
+                    enabled = user_token_cache[user_email].get('auto_drafts_enabled', False)
+                    return jsonify({"enabled": enabled})
+                else:
+                    # User not found in cache, create entry with default disabled
+                    user_token_cache[user_email] = {
+                        'access_token': access_token,
+                        'auto_drafts_enabled': False,
+                        'last_check': time.time()
+                    }
+                    return jsonify({"enabled": False})
+            
+        except Exception as e:
+            logger.error(f"Error identifying user: {str(e)}")
+            return jsonify({"error": "Could not identify user"}), 401
+            
+    except Exception as e:
+        logger.error(f"Error getting auto-drafts status: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/auth/token', methods=['POST'])
 def token_exchange():
     """Exchange an authorization code for access and refresh tokens."""
