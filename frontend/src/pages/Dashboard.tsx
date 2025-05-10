@@ -48,6 +48,8 @@ function Dashboard() {
   const [loadingAutoSetting, setLoadingAutoSetting] = useState(false);
 
   const toggleAutoDrafts = async () => {
+    if (loadingAutoSetting) return; // Prevent multiple clicks
+    
     try {
       setLoadingAutoSetting(true);
       
@@ -58,24 +60,48 @@ function Dashboard() {
       
       const newSetting = !autoDraftsEnabled;
       
+      console.log(`Attempting to ${newSetting ? 'enable' : 'disable'} auto-drafts...`);
+      
+      // Get the best available token (prioritize provider_token if available)
+      let accessToken = user.accessToken;
+      const providerToken = user.userMetadata?.provider_token;
+      
+      if (providerToken) {
+        console.log("Using provider token for auto-drafts toggle");
+        accessToken = providerToken;
+      }
+      
       const response = await fetch(`${API_URL}/set-auto-drafts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.accessToken}`,
+          'Authorization': `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({ enabled: newSetting }),
+        body: JSON.stringify({ 
+          enabled: newSetting,
+          // Include refresh token if available in local storage
+          refresh_token: localStorage.getItem('gmail_refresh_token')
+        }),
       });
       
       if (!response.ok) {
-        throw new Error("Failed to update settings");
+        const errorData = await response.json();
+        console.error('Server response:', errorData);
+        throw new Error(errorData.error || "Failed to update settings");
       }
       
+      const responseData = await response.json();
+      console.log('Auto-drafts setting updated successfully:', responseData);
       setAutoDraftsEnabled(newSetting);
       
     } catch (error) {
       console.error('Error updating auto-drafts setting:', error);
       setError(error instanceof Error ? error.message : String(error));
+      
+      // Show error for 3 seconds, then clear
+      setTimeout(() => {
+        setError(null);
+      }, 3000);
     } finally {
       setLoadingAutoSetting(false);
     }
@@ -86,16 +112,35 @@ function Dashboard() {
       try {
         if (!user || !user.accessToken) return;
         
+        // Get the best available token (prioritize provider_token if available)
+        let accessToken = user.accessToken;
+        const providerToken = user.userMetadata?.provider_token;
+        const refreshToken = localStorage.getItem('gmail_refresh_token');
+        
+        if (providerToken) {
+          console.log("Using provider token for auto-drafts status check");
+          accessToken = providerToken;
+        }
+        
+        const headers: HeadersInit = {
+          'Authorization': `Bearer ${accessToken}`,
+        };
+        
+        // Include refresh token if available
+        if (refreshToken) {
+          headers['X-Refresh-Token'] = refreshToken;
+        }
+        
         const response = await fetch(`${API_URL}/get-auto-drafts-status`, {
           method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${user.accessToken}`,
-          }
+          headers
         });
         
         if (response.ok) {
           const data = await response.json();
           setAutoDraftsEnabled(data.enabled);
+        } else {
+          console.error('Failed to get auto-drafts status:', await response.text());
         }
       } catch (error) {
         console.error('Error fetching auto-drafts setting:', error);

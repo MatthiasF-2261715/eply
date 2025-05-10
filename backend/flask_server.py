@@ -98,11 +98,30 @@ def background_email_checker():
             for user_email, user_data in users_to_process:
                 try:
                     access_token = user_data.get('access_token')
-                    if not access_token:
+                    refresh_token = user_data.get('refresh_token')
+                    client_id = user_data.get('client_id')
+                    client_secret = user_data.get('client_secret')
+                    token_uri = user_data.get('token_uri')
+                    
+                    # Skip if we don't have the necessary credentials
+                    if not (access_token and client_id and client_secret and token_uri):
+                        logger.warning(f"Missing credentials for user {user_email}, skipping auto-draft generation")
                         continue
-                        
-                    # Use token to authenticate with Gmail
-                    service = authenticate_gmail_with_token(access_token)
+                    
+                    # Create credentials
+                    from google.oauth2.credentials import Credentials
+                    
+                    creds = Credentials(
+                        token=access_token,
+                        refresh_token=refresh_token,
+                        client_id=client_id,
+                        client_secret=client_secret,
+                        token_uri=token_uri,
+                        scopes=SCOPES
+                    )
+                    
+                    # Create service
+                    service = build("gmail", "v1", credentials=creds)
                     
                     # Get recent unread emails
                     results = service.users().messages().list(
@@ -196,6 +215,8 @@ background_thread = threading.Thread(target=background_email_checker, daemon=Tru
 background_thread.start()
 
 # Add new endpoints for managing auto-draft settings
+# Improve the set-auto-drafts route
+
 @app.route('/set-auto-drafts', methods=['POST'])
 def set_auto_drafts():
     """Enable or disable automatic draft generation for a user."""
@@ -207,32 +228,66 @@ def set_auto_drafts():
             
         data = request.json
         enabled = data.get('enabled', False)
+        refresh_token = data.get('refresh_token')
         
-        # Get user email from token
-        try:
-            service = authenticate_gmail_with_token(access_token)
-            profile = service.users().getProfile(userId="me").execute()
-            user_email = profile.get('emailAddress', 'unknown')
+        logger.info(f"Setting auto-drafts to {enabled}, refresh token available: {bool(refresh_token)}")
+        
+        # Get credentials file path
+        credentials_file = get_credentials_file()
+        if not credentials_file:
+            return jsonify({"error": "No credentials available - check environment variables"}), 500
             
-            # Update user preferences
-            with user_cache_lock:
-                if user_email not in user_token_cache:
-                    user_token_cache[user_email] = {}
-                    
-                user_token_cache[user_email]['access_token'] = access_token
-                user_token_cache[user_email]['auto_drafts_enabled'] = enabled
-                user_token_cache[user_email]['last_check'] = time.time()
+        # Load client secrets from credentials file
+        with open(credentials_file, "r") as creds_file:
+            creds_data = json.load(creds_file)
+            
+        client_id = creds_data["web"]["client_id"]
+        client_secret = creds_data["web"]["client_secret"]
+        token_uri = creds_data["web"]["token_uri"]
+        
+        # Create credentials
+        from google.oauth2.credentials import Credentials
+        
+        creds = Credentials(
+            token=access_token,
+            refresh_token=refresh_token,
+            client_id=client_id,
+            client_secret=client_secret,
+            token_uri=token_uri,
+            scopes=SCOPES
+        )
+        
+        # Create service and get user profile
+        service = build("gmail", "v1", credentials=creds)
+        profile = service.users().getProfile(userId="me").execute()
+        user_email = profile.get('emailAddress', 'unknown')
+        
+        logger.info(f"Successfully identified user: {user_email} for auto-drafts setting")
+        
+        # Update user preferences
+        with user_cache_lock:
+            if user_email not in user_token_cache:
+                user_token_cache[user_email] = {}
                 
-            return jsonify({"success": True, "enabled": enabled})
+            user_token_cache[user_email]['access_token'] = access_token
             
-        except Exception as e:
-            logger.error(f"Error identifying user: {str(e)}")
-            return jsonify({"error": "Could not identify user"}), 401
+            # Store refresh token if available
+            if refresh_token:
+                user_token_cache[user_email]['refresh_token'] = refresh_token
+                
+            user_token_cache[user_email]['auto_drafts_enabled'] = enabled
+            user_token_cache[user_email]['last_check'] = time.time()
+            
+            # Store client credentials
+            user_token_cache[user_email]['client_id'] = client_id
+            user_token_cache[user_email]['client_secret'] = client_secret
+            user_token_cache[user_email]['token_uri'] = token_uri
+            
+        return jsonify({"success": True, "enabled": enabled})
             
     except Exception as e:
         logger.error(f"Error setting auto-drafts: {str(e)}")
         return jsonify({"error": str(e)}), 500
-
 
 def decode_email_body(payload):
     """Recursively decode email body parts."""
@@ -519,6 +574,8 @@ def extract_sender_name(email_data):
         logger.error(f"Error extracting sender name: {str(e)}")
         return ""
 
+# Improve the get-auto-drafts-status route
+
 @app.route('/get-auto-drafts-status', methods=['GET'])
 def get_auto_drafts_status():
     """Get the current automatic draft generation status for a user."""
@@ -528,9 +585,37 @@ def get_auto_drafts_status():
         if not access_token:
             return jsonify({"error": "Missing or invalid authorization token"}), 401
         
-        # Get user email from token
         try:
-            service = authenticate_gmail_with_token(access_token)
+            # Get credentials file path
+            credentials_file = get_credentials_file()
+            if not credentials_file:
+                return jsonify({"error": "No credentials available - check environment variables"}), 500
+                
+            # Load client secrets from credentials file
+            with open(credentials_file, "r") as creds_file:
+                creds_data = json.load(creds_file)
+                
+            client_id = creds_data["web"]["client_id"]
+            client_secret = creds_data["web"]["client_secret"]
+            token_uri = creds_data["web"]["token_uri"]
+            
+            # Create credentials
+            from google.oauth2.credentials import Credentials
+            
+            # Get refresh token from localStorage if available
+            refresh_token = request.headers.get('X-Refresh-Token')
+            
+            creds = Credentials(
+                token=access_token,
+                refresh_token=refresh_token,
+                client_id=client_id,
+                client_secret=client_secret,
+                token_uri=token_uri,
+                scopes=SCOPES
+            )
+            
+            # Create service and get user profile
+            service = build("gmail", "v1", credentials=creds)
             profile = service.users().getProfile(userId="me").execute()
             user_email = profile.get('emailAddress', 'unknown')
             
@@ -543,14 +628,18 @@ def get_auto_drafts_status():
                     # User not found in cache, create entry with default disabled
                     user_token_cache[user_email] = {
                         'access_token': access_token,
+                        'refresh_token': refresh_token,
+                        'client_id': client_id,
+                        'client_secret': client_secret,
+                        'token_uri': token_uri,
                         'auto_drafts_enabled': False,
                         'last_check': time.time()
                     }
                     return jsonify({"enabled": False})
-            
+                
         except Exception as e:
             logger.error(f"Error identifying user: {str(e)}")
-            return jsonify({"error": "Could not identify user"}), 401
+            return jsonify({"error": str(e)}), 401
             
     except Exception as e:
         logger.error(f"Error getting auto-drafts status: {str(e)}")
