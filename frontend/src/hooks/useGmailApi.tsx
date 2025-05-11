@@ -66,8 +66,8 @@ export function useGmailApi(companyId: string = "default-company"): ApiResponse 
   
   const { user, signOut } = useAuth();
 
-  // Add a ref to track the last token verification time
   const lastVerification = useRef<{ token: string; timestamp: number; isValid: boolean } | null>(null);
+  const verificationInProgress = useRef<boolean>(false);
 
   // Cleans up email snippet text
   const cleanSnippet = (snippet: string): string => {
@@ -91,10 +91,22 @@ export function useGmailApi(companyId: string = "default-company"): ApiResponse 
     if (lastVerification.current && 
         lastVerification.current.token === user.accessToken && 
         now - lastVerification.current.timestamp < 5 * 60 * 1000) {
+      console.log("Using cached token verification result");
       return lastVerification.current.isValid;
     }
 
+    // Prevent multiple simultaneous verification requests
+    if (verificationInProgress.current) {
+      console.log("Token verification already in progress, waiting...");
+      // Wait for the current verification to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return verifyUserToken();
+    }
+
     try {
+      verificationInProgress.current = true;
+      console.log("Verifying token...");
+      
       const response = await fetch(`${API_URL}/auth/verify-token`, {
         method: 'GET',
         headers: {
@@ -104,6 +116,7 @@ export function useGmailApi(companyId: string = "default-company"): ApiResponse 
       });
 
       const isValid = response.ok;
+      console.log("Token verification result:", isValid);
 
       // Cache the verification result
       lastVerification.current = {
@@ -116,6 +129,8 @@ export function useGmailApi(companyId: string = "default-company"): ApiResponse 
     } catch (error) {
       console.error('Error verifying user token:', error);
       return false;
+    } finally {
+      verificationInProgress.current = false;
     }
   };
 

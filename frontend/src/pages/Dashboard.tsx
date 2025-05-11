@@ -184,7 +184,7 @@ function Dashboard() {
     }
   }, [user, fetchEmails, testTokenValidity, emails.length]);
 
-  // Initial email load with background validation
+  // Initial email load with background validation - use a longer interval
   useEffect(() => {
     let isMounted = true;
     
@@ -195,29 +195,64 @@ function Dashboard() {
       }
     }, 2000);
     
-    // Set up periodic token validation (once every 5 minutes) instead of constant refreshing
+    // Set up periodic token validation (every 15 minutes) instead of frequent refreshing
     if (tokenCheckInterval.current) {
       clearInterval(tokenCheckInterval.current);
     }
     
-    tokenCheckInterval.current = setInterval(() => {
-      if (isMounted && user) {
-        // Only verify token, don't auto-refresh
-        verifyUserToken().catch(err => {
-          console.error("Token validation error:", err);
-          if (err.message?.includes("invalid")) {
-            setTokenError(true);
+    // Only set up token validation if we don't already have a cached validation result
+    const setupTokenValidation = async () => {
+      if (!isMounted) return;
+      
+      // We'll only set up the interval check if we haven't validated the token yet
+      // This prevents unnecessary interval setup
+      tokenCheckInterval.current = setInterval(() => {
+        if (isMounted && user) {
+          // Only perform validation if user is active (has interacted with the page recently)
+          // This adds another layer of protection against unnecessary calls
+          const lastUserActivity = localStorage.getItem('lastUserActivity');
+          const now = Date.now();
+          if (lastUserActivity && (now - parseInt(lastUserActivity, 10) < 30 * 60 * 1000)) {
+            console.log("Scheduled token validation");
+            verifyUserToken().catch(err => {
+              console.error("Token validation error:", err);
+              if (err.message?.includes("invalid")) {
+                setTokenError(true);
+              }
+            });
           }
-        });
-      }
-    }, 5 * 60 * 1000); // Check every 5 minutes
+        }
+      }, 15 * 60 * 1000); // Check every 15 minutes instead of 5
+    };
+    
+    // Don't set up interval immediately, wait a bit to let initial page load complete
+    const setupTimer = setTimeout(() => {
+      setupTokenValidation();
+    }, 5000);
+    
+    // Track user activity
+    const trackActivity = () => {
+      localStorage.setItem('lastUserActivity', Date.now().toString());
+    };
+    
+    // Set up activity tracking
+    window.addEventListener('click', trackActivity);
+    window.addEventListener('keydown', trackActivity);
+    window.addEventListener('mousemove', trackActivity);
+    
+    // Set initial activity timestamp
+    trackActivity();
     
     return () => {
       isMounted = false;
       clearTimeout(initialLoadTimer);
+      clearTimeout(setupTimer);
       if (tokenCheckInterval.current) {
         clearInterval(tokenCheckInterval.current);
       }
+      window.removeEventListener('click', trackActivity);
+      window.removeEventListener('keydown', trackActivity);
+      window.removeEventListener('mousemove', trackActivity);
     };
   }, [loadEmails, emails.length, user, verifyUserToken]);
   
