@@ -13,7 +13,7 @@ from config import SCOPES, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, logger
 from utils import extract_token, extract_sender_name, get_credentials_file
 from auth import authenticate_gmail_with_token
 from email_service import get_email_content
-from ai_service import generate_reply, analyze_writing_style
+from ai_service import generate_reply, analyze_writing_style, client
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
