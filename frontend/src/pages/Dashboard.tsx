@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useGmailApi } from '../hooks/useGmailApi';
 import '../css/email-styles.css';
 
-const API_URL = import.meta.env.VITE_API_URL || '';
-
+// Type definitions
 interface Email {
   id: string;
   from: string;
@@ -15,40 +15,38 @@ interface Email {
   to?: string;
 }
 
-interface WritingStyleAnalysis {
-  greeting_patterns: string[];
-  closing_patterns: string[];
-  formality_level: string;
-  common_phrases: string[];
-  sample_count: number;
-}
-
 function Dashboard() {
-  const [emails, setEmails] = useState<Email[]>([]);
-  const [loading, setLoading] = useState(true);
+  // --- API HOOK ---
+  const {
+    emails,
+    loading,
+    loadingMore,
+    loadingEmail,
+    error,
+    nextPageToken,
+    totalEmailsLoaded,
+    styleAnalysis,
+    selectedEmail,
+    generatedReply,
+    generatingReply,
+    replySubject,
+    fetchEmails,
+    handleGenerateReply,
+    handleViewEmail,
+    handleLoadMore,
+    handleRefresh,
+    testTokenValidity
+  } = useGmailApi();
+
+  // --- STATE MANAGEMENT ---
   const { user, signOut } = useAuth();
-  const [error, setError] = useState<string | null>(null);
   const [showReplyModal, setShowReplyModal] = useState(false);
-  const [generatedReply, setGeneratedReply] = useState('');
-  const [replySubject, setReplySubject] = useState('');
-  const [generatingReply, setGeneratingReply] = useState<string | null>(null);
-  const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [showEmailModal, setShowEmailModal] = useState(false);
-  const [loadingEmail, setLoadingEmail] = useState(false);
-  const [styleAnalysis, setStyleAnalysis] = useState<WritingStyleAnalysis | null>(null);
-  const companyId = "default-company";
-
-  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
-  const [totalEmailsLoaded, setTotalEmailsLoaded] = useState(0);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [tokenError, setTokenError] = useState<boolean>(false);
-  const emailsPerRequest = 20; // Number of emails to fetch per request
 
-  /**
-   * Decodes HTML entities in a string
-   * @param {string} text - The text to decode
-   * @returns {string} Decoded text
-   */
+  // --- UTILITY FUNCTIONS ---
+
+  // Decodes HTML entities in a string
   const decodeHTMLEntities = (text: string) => {
     if (!text) return '';
     
@@ -57,33 +55,10 @@ function Dashboard() {
     return textarea.value;
   };
 
-  /**
-   * Cleans up email snippet text
-   * @param {string} snippet - The snippet text to clean
-   * @returns {string} Cleaned snippet text
-   */
-  const cleanSnippet = (snippet: string): string => {
-    if (!snippet) return '';
-    
-    // Unescape HTML entities
-    const parser = new DOMParser();
-    let cleaned = parser.parseFromString(snippet, 'text/html').documentElement.textContent || '';
-  
-    // Remove any weird character sequences
-    cleaned = cleaned.replace(/&#\d+;/g, '').replace(/&[a-zA-Z]+;/g, '');
-    
-    return cleaned;
-  };
-
-  /**
-   * Sanitizes email HTML content
-   * @param {string} html - The HTML content to sanitize
-   * @returns {string} Sanitized HTML content
-   */
+  // Sanitizes email HTML content
   const sanitizeEmailHTML = (html: string) => {
     if (!html) return '';
     
-    // Replace problematic HTML entities
     return html
       .replace(/&apos;/g, "'")
       .replace(/&#39;/g, "'")
@@ -91,66 +66,20 @@ function Dashboard() {
       .replace(/&#x27;/g, "'");
   };
 
-  /**
-   * Verifies if the user's token is valid and belongs to the current user
-   * @returns {Promise<boolean>} True if token is valid, false otherwise
-   */
-  const verifyUserToken = async (): Promise<boolean> => {
-    if (!user || !user.accessToken) {
-      return false;
-    }
-
-    try {
-      const response = await fetch(`${API_URL}/auth/verify-token`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${user.accessToken}`,
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Token validation failed');
-      }
-
-      const data = await response.json();
-      
-      if (data.email && user.email && data.email !== user.email) {
-        console.error(`Token belongs to ${data.email} but current user is ${user.email}`);
-        return false;
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Error verifying token:', error);
-      return false;
-    }
-  };
-
-  /**
-   * Formats a date string to a user-friendly format without seconds, timezone, etc.
-   * @param {string} dateString - The date string to format
-   * @returns {string} Formatted date string
-   */
+  // Formats a date string to a user-friendly format
   const formatEmailDate = (dateString: string): string => {
     try {
       if (!dateString) return '';
       
-      // Parse the date string to a Date object
       const date = new Date(dateString);
       
-      // Check if date is valid
       if (isNaN(date.getTime())) {
-        // Try to handle common email date formats
         if (dateString.includes(',')) {
-          // Format like: "Sun, 04 May 2025 09:26:37 +0000 (UTC)"
           const parts = dateString.split(',');
           if (parts.length >= 2) {
-            // Remove everything after the time (timezone, etc.)
             const mainPart = parts[1].trim();
             const timeParts = mainPart.split(' ');
             if (timeParts.length >= 4) {
-              // Just keep day, month, year, and time without seconds
               const day = timeParts[0];
               const month = timeParts[1];
               const year = timeParts[2];
@@ -159,10 +88,9 @@ function Dashboard() {
             }
           }
         }
-        return dateString; // Return original if we can't parse it
+        return dateString;
       }
       
-      // Format date for display: "4 May 2025 at 09:26"
       const options: Intl.DateTimeFormatOptions = {
         day: 'numeric',
         month: 'short',
@@ -174,324 +102,27 @@ function Dashboard() {
       
       return date.toLocaleDateString('en-US', options).replace(',', ' at');
     } catch (error) {
-      console.error('Error formatting date:', error);
-      return dateString; // Return original if there's an error
+      return dateString;
     }
   };
 
-  /**
-   * Fetches emails from the backend server
-   * @param {string} [overrideToken] - Optional token to use instead of looking up tokens
-   * @param {boolean} [isLoadingMore] - Whether this is a "Show More" request
-   * @returns {Promise<void>}
-   */
-  async function fetchEmails(overrideToken?: string, isLoadingMore: boolean = false): Promise<void> {
-    // Only reset emails if we're doing a fresh load (not "Show More")
-    if (!isLoadingMore) {
-      setEmails([]);
-      setTotalEmailsLoaded(0);
-    }
-    
-    isLoadingMore ? setLoadingMore(true) : setLoading(true);
-    setError(null);
-    setTokenError(false);
+  // --- EVENT HANDLERS ---
   
-    if (!user) {
-      setError("Not logged in");
-      setLoading(false);
-      setLoadingMore(false);
-      return;
-    }
-  
-    try {
-      // Use provided override token or get one from available sources
-      let googleToken = overrideToken;
-      
-      if (!googleToken) {
-        // Get the Google access token from Supabase user metadata or localStorage
-        googleToken = user.userMetadata?.provider_token;
-        
-        // Fallback to localStorage if not available in metadata
-        if (!googleToken) {
-          const storedToken = localStorage.getItem('gmail_provider_token');
-          googleToken = storedToken || undefined; // Convert null to undefined
-        }
-        
-        if (!googleToken) {
-          // Try to get the token from the user's accessToken
-          googleToken = user.accessToken;
-          console.log("Using user accessToken as fallback for Gmail API");
-        }
-      }
-      
-      if (!googleToken) {
-        setError("No valid Google access token found. Please re-login.");
-        setLoading(false);
-        setLoadingMore(false);
-        return;
-      }
-  
-      console.log("Using token for Gmail API access", { tokenExists: !!googleToken });
-      
-      // Create URL with query parameters
-      const url = new URL(`${API_URL}/get-emails`);
-      url.searchParams.append('maxResults', emailsPerRequest.toString());
-      // Removed label parameter to get all emails
-      
-      // Add pageToken if we're loading more
-      if (isLoadingMore && nextPageToken) {
-        url.searchParams.append('pageToken', nextPageToken);
-      }
-      
-      const response = await fetch(url.toString(), {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${googleToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
-  
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          // Token is invalid or expired
-          console.error("Gmail credentials are invalid or expired");
-          setTokenError(true);
-          throw new Error("Your Gmail access has expired. Please login again.");
-        }
-        throw new Error(`Failed to fetch emails: ${response.status} ${response.statusText}`);
-      }
-  
-      const data = await response.json();
-      
-      // Store the next page token for future "Show More" requests
-      setNextPageToken(data.nextPageToken || null);
-      
-      if (Array.isArray(data.emails)) {
-        // If loading more, append to existing emails
-        if (isLoadingMore) {
-          setEmails(prevEmails => [...prevEmails, ...data.emails.map((email: any) => ({
-            ...email,
-            snippet: cleanSnippet(email.snippet || '')
-          }))]);
-          setTotalEmailsLoaded(prev => prev + data.emails.length);
-        } else {
-          setEmails(data.emails.map((email: any) => ({
-            ...email,
-            snippet: cleanSnippet(email.snippet || '')
-          })));
-          setTotalEmailsLoaded(data.emails.length);
-        }
-      } else {
-        console.warn("API returned unexpected data structure:", data);
-        if (!isLoadingMore) {
-          setEmails([]);
-          setTotalEmailsLoaded(0);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching emails:', error);
-      setError(error instanceof Error ? error.message : String(error));
-      
-      // If we detected a token error earlier, handle automatic logout
-      if (tokenError) {
-        console.log("Initiating automatic logout due to invalid Gmail credentials");
-        setTimeout(() => {
-          if (signOut) signOut();
-        }, 2000);
-      }
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  }
-
-  /**
-   * Generates an AI reply to a specific email
-   * @param {string} emailId - The ID of the email to generate a reply for
-   * @returns {Promise<void>}
-   */
-  const handleGenerateReply = async (emailId: string): Promise<void> => {
-    if (!user) {
-      setError("Not logged in");
-      return;
-    }
-  
-    setGeneratingReply(emailId);
-  
-    try {
-      const googleToken = user.userMetadata?.provider_token; // Get Google token from user metadata
-      
-      if (!googleToken) {
-        throw new Error("No valid Google access token found. Please re-login.");
-      }
-
-      // Debug log to check token
-      console.log("Using provider token for reply generation:", !!googleToken);
-      
-      const response = await fetch(`${API_URL}/generate-reply`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${googleToken}`,
-        },
-        body: JSON.stringify({ emailId, companyId }),
-      });
-  
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          // Token is invalid or expired
-          setTokenError(true);
-          throw new Error("Your Gmail access has expired. Please login again.");
-        }
-        
-        const errorText = await response.text();
-        console.error("API error response for reply generation:", errorText);
-        throw new Error(`Failed to generate reply: ${response.status} - ${errorText}`);
-      }
-  
-      const result = await response.json();
-      const emailBeingReplied = emails.find(email => email.id === emailId);
-      const subject = emailBeingReplied ? `Re: ${emailBeingReplied.subject}` : 'Reply';
-  
-      setGeneratedReply(result.reply);
-      setReplySubject(subject);
-      
-      if (result.styleAnalysis) {
-        setStyleAnalysis(result.styleAnalysis);
-      }
-      
-      setShowReplyModal(true);
-    } catch (error) {
-      console.error('Error generating reply:', error);
-      setError(error instanceof Error ? error.message : String(error));
-      
-      // If we detected a token error, handle automatic logout
-      if (tokenError) {
-        setTimeout(() => {
-          if (signOut) signOut();
-        }, 2000);
-      }
-    } finally {
-      setGeneratingReply(null);
-    }
-  };
-
-  /**
-   * Refreshes the email list
-   * @returns {void}
-   */
-  const handleRefresh = (): void => {
-    setEmails([]);
-    setError(null);
-    setNextPageToken(null);
-    setTotalEmailsLoaded(0);
-    fetchEmails();
-  };
-
-  /**
-   * Fetches and displays the full content of a specific email
-   * @param {string} emailId - The ID of the email to view
-   * @returns {Promise<void>}
-   */
-  const handleViewEmail = async (emailId: string): Promise<void> => {
-    if (!user) {
-      setError("Not logged in");
-      return;
-    }
-  
-    setSelectedEmail(null);
+  // Handle view email with modal management
+  const onViewEmail = async (emailId: string) => {
     setShowEmailModal(true);
-    setLoadingEmail(true);
-    
-    try {
-      const emailInList = emails.find(email => email.id === emailId);
-      if (!emailInList) {
-        throw new Error("Email not found");
-      }
-      
-      setSelectedEmail({...emailInList, body: undefined});
-      
-      // Get token for authorization
-      let googleToken = user.userMetadata?.provider_token;
-      
-      // Fallback to localStorage if not available in metadata
-      if (!googleToken) {
-        const storedToken = localStorage.getItem('gmail_provider_token');
-        googleToken = storedToken || undefined;
-      }
-      
-      // Last resort fallback
-      if (!googleToken) {
-        googleToken = user.accessToken;
-      }
-      
-      if (!googleToken) {
-        throw new Error("No valid Google access token found. Please re-login.");
-      }
-      
-      // Create URL with query parameter for the email ID
-      const url = new URL(`${API_URL}/get-email-detail`);
-      url.searchParams.append('id', emailId);
-      
-      const response = await fetch(url.toString(), {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${googleToken}`,
-          'Content-Type': 'application/json',
-        }
-      });
-  
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          // Token is invalid or expired
-          setTokenError(true);
-          throw new Error("Your Gmail access has expired. Please login again.");
-        }
-        // Alleen de status en statusText gebruiken voor de error
-        throw new Error(`Failed to fetch email: ${response.status} ${response.statusText}`);
-      }
-  
-      const data = await response.json();
-      
-      if (!data.email || !data.email.body) {
-        throw new Error("Unexpected response format from server");
-      }
-      
-      const updatedEmails = emails.map(email => 
-        email.id === emailId 
-          ? { ...email, body: data.email.body } 
-          : email
-      );
-      
-      setEmails(updatedEmails);
-      setSelectedEmail({ ...emailInList, body: data.email.body });
-    } catch (error) {
-      console.error('Error fetching email:', error);
-      setError(error instanceof Error ? error.message : String(error));
-      
-      // If we detected a token error, handle automatic logout
-      if (tokenError) {
-        setTimeout(() => {
-          if (signOut) signOut();
-        }, 2000);
-      }
-    } finally {
-      setLoadingEmail(false);
-    }
+    await handleViewEmail(emailId);
   };
 
-  /**
-   * Handles loading more emails
-   */
-  const handleLoadMore = (): void => {
-    if (nextPageToken) {
-      fetchEmails(undefined, true);
-    }
+  // Handle generate reply with modal management
+  const onGenerateReply = async (emailId: string) => {
+    await handleGenerateReply(emailId);
+    setShowReplyModal(true);
   };
 
-  /**
-   * Loads emails when component mounts or when user changes
-   */
+  // --- EFFECTS ---
+
+  // Log authentication state when user changes
   useEffect(() => {
     if (user) {
       console.log("Auth state updated:", {
@@ -501,7 +132,6 @@ function Dashboard() {
         email: user.email
       });
       
-      // Check localStorage for tokens
       const storedToken = localStorage.getItem('gmail_provider_token');
       console.log("Local storage token available:", !!storedToken);
     } else {
@@ -509,32 +139,27 @@ function Dashboard() {
     }
   }, [user]);
   
+  // Load emails when component mounts
   useEffect(() => {
     let isMounted = true;
     
     const loadEmails = async () => {
       if (!user) {
-        setLoading(false);
         return;
       }
       
       if (isMounted) {
-        setLoading(true);
         try {
-          // Give more time for token to be fully available
           await new Promise(resolve => setTimeout(resolve, 1500));
           
-          // Get the Google access token from Supabase user metadata or localStorage
           let googleToken = user.userMetadata?.provider_token;
           
-          // Fallback to localStorage if not available in metadata
           if (!googleToken) {
             const storedToken = localStorage.getItem('gmail_provider_token');
-            googleToken = storedToken || undefined; // Convert null to undefined
+            googleToken = storedToken || undefined;
           }
           
           if (!googleToken) {
-            // Try to get the token from the user's accessToken
             googleToken = user.accessToken;
             console.log("Using user accessToken as fallback for Gmail API");
           }
@@ -543,50 +168,23 @@ function Dashboard() {
             throw new Error("No valid Google access token found. Please re-login.");
           }
           
-          // Test if token is valid before proceeding
           const isValid = await testTokenValidity(googleToken);
           if (!isValid) {
             throw new Error("Google token is invalid or expired.");
           }
   
-          // Proceed with fetching emails using the valid token
           if (isMounted) {
             await fetchEmails();
           }
         } catch (error) {
           console.error("Error during initial email loading:", error);
           if (isMounted) {
-            setError("Failed to load emails. Please try refreshing.");
-          }
-        } finally {
-          if (isMounted) {
-            setLoading(false);
+            setTokenError(true);
           }
         }
       }
     };
-  
-    // Add a helper function to test token validity
-    const testTokenValidity = async (token: string): Promise<boolean> => {
-      try {
-        const response = await fetch(`${API_URL}/auth/verify-token`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          }
-        });
-        
-        if (!response.ok) return false;
-        
-        const data = await response.json();
-        return data.valid === true;
-      } catch (e) {
-        return false;
-      }
-    };
     
-    // Run the email loading logic with a longer delay to ensure auth is complete
     const timer = setTimeout(() => {
       loadEmails();
     }, 2000);
@@ -595,15 +193,11 @@ function Dashboard() {
       isMounted = false;
       clearTimeout(timer);
     };
-  }, [user]);
+  }, [user, fetchEmails, testTokenValidity]);
 
-  // Add effect to watch for token errors and trigger logout
+  // Handle token errors
   useEffect(() => {
     if (tokenError && user) {
-      // Show a friendly message before logout
-      setError("Your Gmail access has expired. Logging you out...");
-      
-      // Delay logout slightly to show the message
       const timer = setTimeout(() => {
         signOut();
       }, 3000);
@@ -612,8 +206,10 @@ function Dashboard() {
     }
   }, [tokenError, user, signOut]);
 
+  // --- RENDER UI ---
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Header section */}
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Email Dashboard</h1>
         <div className="flex space-x-4">
@@ -627,24 +223,27 @@ function Dashboard() {
         </div>
       </div>
 
+      {/* Error display */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
           Error: {error}
         </div>
       )}
 
+      {/* Loading state */}
       {loading && emails.length === 0 ? (
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
       ) : emails.length > 0 ? (
+        // Email list display
         <div className="bg-white shadow overflow-hidden sm:rounded-md">
           <ul className="divide-y divide-gray-200">
             {emails.map((email) => (
               <li 
                 key={email.id} 
                 className="px-6 py-4 hover:bg-gray-50 cursor-pointer"
-                onClick={() => handleViewEmail(email.id)}
+                onClick={() => onViewEmail(email.id)}
               >
                 <div className="flex items-center space-x-4">
                   <div className="flex-shrink-0">
@@ -659,7 +258,7 @@ function Dashboard() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleGenerateReply(email.id);
+                      onGenerateReply(email.id);
                     }}
                     disabled={generatingReply === email.id}
                     className={`ml-4 px-4 py-2 text-sm font-medium rounded-md ${
@@ -675,7 +274,7 @@ function Dashboard() {
             ))}
           </ul>
           
-          {/* Show more emails button */}
+          {/* Pagination */}
           {emails.length > 0 && nextPageToken && (
             <div className="px-6 py-4 border-t border-gray-200 flex flex-col items-center justify-center">
               <p className="text-sm text-gray-700 mb-3">
@@ -703,6 +302,7 @@ function Dashboard() {
           )}
         </div>
       ) : (
+        // Empty state
         <div className="text-center py-12">
           <Mail className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-lg font-medium text-gray-900">No emails found</h3>
@@ -754,7 +354,7 @@ function Dashboard() {
       {showEmailModal && selectedEmail && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl h-[70vh] flex flex-col overflow-hidden">
-            {/* Fixed header that stays on top - adding pointer-events-none to prevent content interference */}
+            {/* Header */}
             <div className="sticky top-0 flex justify-between items-center border-b p-4 bg-white z-30 shadow-md">
               <h3 className="text-lg font-bold truncate text-gray-900">{selectedEmail.subject}</h3>
               <button
@@ -765,7 +365,7 @@ function Dashboard() {
               </button>
             </div>
             
-            {/* Email metadata section - making this sticky too */}
+            {/* Metadata */}
             <div className="sticky top-[72px] p-4 border-b bg-white z-20 shadow-sm">
               <div className="flex justify-between items-start">
                 <p className="text-sm font-bold text-gray-900">From: {selectedEmail.from}</p>
@@ -776,7 +376,7 @@ function Dashboard() {
               )}
             </div>
             
-            {/* Isolate the email content in its own scrollable container */}
+            {/* Email content */}
             <div className="relative flex-grow overflow-auto" style={{ contain: 'content' }}>
               <div className="p-6">
                 {loadingEmail ? (
@@ -785,7 +385,6 @@ function Dashboard() {
                   </div>
                 ) : selectedEmail.body ? (
                   <div className="email-container"> 
-                    {/* Add more isolation techniques */}
                     <div 
                       key={`email-content-${selectedEmail.id}`}
                       className="prose prose-sm max-w-none email-content"
@@ -807,12 +406,12 @@ function Dashboard() {
               </div>
             </div>
             
-            {/* Footer that stays at the bottom */}
+            {/* Footer */}
             <div className="sticky bottom-0 border-t p-4 flex justify-end space-x-4 bg-white z-20 shadow-md">
               <button
                 onClick={() => {
                   setShowEmailModal(false);
-                  handleGenerateReply(selectedEmail.id);
+                  onGenerateReply(selectedEmail.id);
                 }}
                 className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700"
               >

@@ -3,6 +3,7 @@ import { supabase } from '../supabaseClient';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
+// --- TYPE DEFINITIONS ---
 interface User {
   id: string;
   email: string;
@@ -18,7 +19,7 @@ interface User {
     picture?: string;
     provider_id?: string;
     sub?: string;
-    provider_token?: string; // Added provider_token
+    provider_token?: string;
   };
 }
 
@@ -29,6 +30,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
 }
 
+// --- CONTEXT CREATION ---
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoading: false,
@@ -39,15 +41,13 @@ const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // --- STATE ---
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  /**
-   * Refreshes the access token using the provided refresh token
-   * @param {string} refreshToken - The refresh token used to obtain a new access token
-   * @returns {Promise<string>} The new access token
-   * @throws {Error} If the token refresh fails
-   */
+  // --- API FUNCTIONS ---
+  
+  // Refreshes the access token using the provided refresh token
   const refreshAccessToken = async (refreshToken: string): Promise<string> => {
     try {
       const response = await fetch(`${API_URL}/auth/refresh`, {
@@ -72,13 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  /**
-   * Completes the OAuth flow by exchanging the auth code for tokens
-   * @param {string} authCode - The authorization code from OAuth provider
-   * @param {string} redirectUri - The redirect URI used in the OAuth flow
-   * @returns {Promise<string>} The access token
-   * @throws {Error} If the code exchange fails
-   */
+  // Completes the OAuth flow by exchanging the auth code for tokens
   const completeOAuthFlow = async (authCode: string, redirectUri: string): Promise<string> => {
     try {
       const response = await fetch(`${API_URL}/auth/token`, {
@@ -107,10 +101,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  /**
-   * Checks for an existing session and initializes the user state
-   * Also handles OAuth redirects
-   */
+  // --- EFFECTS ---
+
+  // Initialize user session and handle OAuth redirects
   useEffect(() => {
     const checkSession = async () => {
       try {
@@ -136,6 +129,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     checkSession();
     
+    // Handle OAuth redirect
     const handleRedirect = async () => {
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const queryParams = new URLSearchParams(window.location.search);
@@ -156,9 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     handleRedirect();
   }, []);
 
-  /**
-   * Sets up a listener for auth state changes
-   */
+  // Set up auth state change listener
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -197,11 +189,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  /**
-   * Initiates the OAuth sign-in flow with Google
-   * @returns {Promise<void>}
-   * @throws {Error} If the sign-in process fails
-   */
+  // --- AUTH ACTIONS ---
+  
+  // Initiates the OAuth sign-in flow with Google
   const signIn = async (): Promise<void> => {
     try {
       setIsLoading(true);
@@ -237,11 +227,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  /**
-   * Signs out the user from all sessions and clears tokens
-   * @returns {Promise<void>}
-   * @throws {Error} If the sign-out process fails
-   */
+  // Signs out the user from all sessions and clears tokens
   const signOut = async (): Promise<void> => {
     try {
       setIsLoading(true);

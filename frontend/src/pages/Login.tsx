@@ -5,12 +5,11 @@ import { useAuth } from '../context/AuthContext';
 
 function Login() {
   const navigate = useNavigate();
-  const { signIn, user } = useAuth(); // Haal de gebruiker op uit de context
+  const { signIn, user } = useAuth();
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     console.log("user: ", user);
-    // Als de gebruiker is ingelogd, navigeer naar de dashboardpagina
     if (user) {
       navigate('/dashboard');
     }

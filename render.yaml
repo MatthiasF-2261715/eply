@@ -9,7 +9,7 @@ services:
       npm install framer-motion &&
       npm install && 
       npm run build
-    startCommand: gunicorn --chdir backend 'flask_server:app'
+    startCommand: gunicorn --chdir backend 'app:app'
     envVars:
       - key: OPENAI_API_KEY
         sync: false

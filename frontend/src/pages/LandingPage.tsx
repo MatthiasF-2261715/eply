@@ -1,13 +1,23 @@
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, ArrowRight, Sparkles, Clock, Shield, CheckCircle, Star, Users, ChevronDown } from 'lucide-react';
+import { 
+  Mail, 
+  ArrowRight, 
+  Sparkles, 
+  Clock, 
+  Shield, 
+  CheckCircle, 
+  Star, 
+  Users, 
+  ChevronDown 
+} from 'lucide-react';
 import { motion, useAnimation, useScroll, useInView } from 'framer-motion';
 
 function LandingPage() {
   const navigate = useNavigate();
   const { scrollYProgress } = useScroll();
   
-  // Refs for scroll animations
+  // --- ANIMATION REFS ---
   const heroRef = useRef(null);
   const featuresRef = useRef(null);
   const statsRef = useRef(null);
@@ -18,11 +28,12 @@ function LandingPage() {
   const isStatsInView = useInView(statsRef, { once: true });
   const isTestimonialsInView = useInView(testimonialsRef, { once: true });
   
-  // Counters for stats section
+  // --- STATS COUNTERS ---
   const [count1, setCount1] = React.useState(0);
   const [count2, setCount2] = React.useState(0);
   const [count3, setCount3] = React.useState(0);
   
+  // Initialize stat counters when stats section comes into view
   useEffect(() => {
     if (isStatsInView) {
       const timer1 = setTimeout(() => setCount1(95), 100);
@@ -37,9 +48,31 @@ function LandingPage() {
     }
   }, [isStatsInView]);
 
+  // --- TESTIMONIAL DATA ---
+  const testimonials = [
+    {
+      name: "Sarah Johnson",
+      role: "Marketing Director",
+      content: "This tool has completely transformed how I handle email. I save at least 2 hours every day!",
+      delay: 0.2
+    },
+    {
+      name: "Michael Chen",
+      role: "Startup Founder",
+      content: "The responses are so accurate that my team couldn't tell I was using AI. Game changer for busy entrepreneurs.",
+      delay: 0.4
+    },
+    {
+      name: "Priya Patel",
+      role: "Sales Executive",
+      content: "I can now respond to 3x more client inquiries. The AI understands context and tone perfectly.",
+      delay: 0.6
+    }
+  ];
+
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-gradient-to-b from-white to-blue-50">
-      {/* Floating shapes background */}
+      {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-64 h-64 bg-blue-100 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
         <div className="absolute top-40 right-10 w-72 h-72 bg-purple-100 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
@@ -98,7 +131,7 @@ function LandingPage() {
           </motion.div>
         </div>
 
-        {/* Floating email animation */}
+        {/* Animated email preview */}
         <motion.div 
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: isHeroInView ? 0 : 20, opacity: isHeroInView ? 1 : 0 }}
@@ -275,6 +308,7 @@ function LandingPage() {
             transition={{ duration: 0.8 }}
             className="grid grid-cols-1 gap-8 md:grid-cols-3"
           >
+            {/* Time Saved Stat */}
             <div className="text-center">
               <div className="text-5xl font-bold text-white">
                 {isStatsInView && 
@@ -290,6 +324,7 @@ function LandingPage() {
               <p className="mt-2 text-xl text-blue-100">Time Saved</p>
             </div>
             
+            {/* Emails Processed Stat */}
             <div className="text-center">
               <div className="text-5xl font-bold text-white">
                 {isStatsInView && 
@@ -305,6 +340,7 @@ function LandingPage() {
               <p className="mt-2 text-xl text-blue-100">Emails Processed</p>
             </div>
             
+            {/* Average Savings Stat */}
             <div className="text-center">
               <div className="text-5xl font-bold text-white">
                 {isStatsInView && 
@@ -323,7 +359,7 @@ function LandingPage() {
         </div>
       </div>
 
-      {/* Testimonials */}
+      {/* Testimonials Section */}
       <div ref={testimonialsRef} className="py-20 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -341,26 +377,7 @@ function LandingPage() {
           </motion.div>
           
           <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-            {[
-              {
-                name: "Sarah Johnson",
-                role: "Marketing Director",
-                content: "This tool has completely transformed how I handle email. I save at least 2 hours every day!",
-                delay: 0.2
-              },
-              {
-                name: "Michael Chen",
-                role: "Startup Founder",
-                content: "The responses are so accurate that my team couldn't tell I was using AI. Game changer for busy entrepreneurs.",
-                delay: 0.4
-              },
-              {
-                name: "Priya Patel",
-                role: "Sales Executive",
-                content: "I can now respond to 3x more client inquiries. The AI understands context and tone perfectly.",
-                delay: 0.6
-              }
-            ].map((testimonial, index) => (
+            {testimonials.map((testimonial, index) => (
               <motion.div
                 key={index}
                 initial={{ y: 50, opacity: 0 }}
