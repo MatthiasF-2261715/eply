@@ -326,8 +326,8 @@ def register_routes(app):
             max_results = int(request.args.get('maxResults', 20))
             page_token = request.args.get('pageToken')
             
-            # Define query to exclude drafts and sent emails
-            query = "-in:sent -in:draft"
+            # Define query to exclude drafts, sent emails and chats
+            query = "-in:sent -in:draft -in:chats"
             
             # Fetch messages with optional page token
             if page_token:
@@ -335,15 +335,13 @@ def register_routes(app):
                     userId="me", 
                     maxResults=max_results,
                     q=query,
-                    pageToken=page_token,
-                    excludeChats=True
+                    pageToken=page_token
                 ).execute()
             else:
                 results = service.users().messages().list(
                     userId="me", 
                     maxResults=max_results,
-                    q=query,
-                    excludeChats=True
+                    q=query
                 ).execute()
             
             messages = results.get("messages", [])
