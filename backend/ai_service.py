@@ -1,7 +1,7 @@
 import re
 from openai import OpenAI
 from config import OPENAI_API_KEY, logger
-import utils
+from utils import truncate_text
 
 # Initialize OpenAI client
 client = OpenAI(api_key=OPENAI_API_KEY)

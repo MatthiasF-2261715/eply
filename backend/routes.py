@@ -7,6 +7,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import hashlib
 import datetime
+from utils import truncate_text
 
 from config import SCOPES, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, logger
 from utils import extract_token, extract_sender_name, get_credentials_file
