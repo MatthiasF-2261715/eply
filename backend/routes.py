@@ -307,74 +307,74 @@ def register_routes(app):
             return jsonify({"error": str(e)}), 500
 
     @app.route('/get-emails', methods=['GET', 'OPTIONS'])
-def get_emails():
-    """Get emails from Gmail."""
-    # Handle preflight OPTIONS request for CORS
-    if request.method == 'OPTIONS':
-        return '', 200
-        
-    try:
-        # Extract token from Authorization header
-        access_token = extract_token(request)
-        if not access_token:
-            return jsonify({"error": "Missing or invalid authorization token"}), 401
-        
-        # Use token to authenticate with Gmail
-        service = authenticate_gmail_with_token(access_token)
-        
-        # Get pagination parameters
-        max_results = int(request.args.get('maxResults', 20))
-        page_token = request.args.get('pageToken')
-        
-        # Define query to exclude drafts and sent emails
-        query = "-in:sent -in:draft"
-        
-        # Fetch messages with optional page token
-        if page_token:
-            results = service.users().messages().list(
-                userId="me", 
-                maxResults=max_results,
-                q=query,
-                pageToken=page_token,
-                excludeChats=True
-            ).execute()
-        else:
-            results = service.users().messages().list(
-                userId="me", 
-                maxResults=max_results,
-                q=query,
-                excludeChats=True
-            ).execute()
-        
-        messages = results.get("messages", [])
-        next_page_token = results.get("nextPageToken")
-        
-        if not messages:
-            return jsonify({"emails": [], "nextPageToken": None})
-        
-        # Get basic info for each email
-        emails = []
-        for msg in messages:
-            email_data = get_email_content(service, msg["id"])
-            if email_data:
-                # Include only necessary fields for the list view
-                emails.append({
-                    "id": email_data["id"],
-                    "from": email_data["from"],
-                    "subject": email_data["subject"],
-                    "date": email_data["date"],
-                    "snippet": email_data.get("snippet", "")
-                })
-        
-        return jsonify({
-            "emails": emails, 
-            "nextPageToken": next_page_token
-        })
-        
-    except Exception as e:
-        logger.error(f"Error getting emails: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+    def get_emails():
+        """Get emails from Gmail."""
+        # Handle preflight OPTIONS request for CORS
+        if request.method == 'OPTIONS':
+            return '', 200
             
+        try:
+            # Extract token from Authorization header
+            access_token = extract_token(request)
+            if not access_token:
+                return jsonify({"error": "Missing or invalid authorization token"}), 401
+            
+            # Use token to authenticate with Gmail
+            service = authenticate_gmail_with_token(access_token)
+            
+            # Get pagination parameters
+            max_results = int(request.args.get('maxResults', 20))
+            page_token = request.args.get('pageToken')
+            
+            # Define query to exclude drafts and sent emails
+            query = "-in:sent -in:draft"
+            
+            # Fetch messages with optional page token
+            if page_token:
+                results = service.users().messages().list(
+                    userId="me", 
+                    maxResults=max_results,
+                    q=query,
+                    pageToken=page_token,
+                    excludeChats=True
+                ).execute()
+            else:
+                results = service.users().messages().list(
+                    userId="me", 
+                    maxResults=max_results,
+                    q=query,
+                    excludeChats=True
+                ).execute()
+            
+            messages = results.get("messages", [])
+            next_page_token = results.get("nextPageToken")
+            
+            if not messages:
+                return jsonify({"emails": [], "nextPageToken": None})
+            
+            # Get basic info for each email
+            emails = []
+            for msg in messages:
+                email_data = get_email_content(service, msg["id"])
+                if email_data:
+                    # Include only necessary fields for the list view
+                    emails.append({
+                        "id": email_data["id"],
+                        "from": email_data["from"],
+                        "subject": email_data["subject"],
+                        "date": email_data["date"],
+                        "snippet": email_data.get("snippet", "")
+                    })
+            
+            return jsonify({
+                "emails": emails, 
+                "nextPageToken": next_page_token
+            })
+            
+        except Exception as e:
+            logger.error(f"Error getting emails: {str(e)}")
+            return jsonify({"error": str(e)}), 500
+                
     @app.route('/get-sent-emails', methods=['GET', 'OPTIONS'])
     def get_sent_emails():
         """Get sent emails from Gmail."""
