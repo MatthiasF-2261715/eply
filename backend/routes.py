@@ -14,6 +14,7 @@ from auth import authenticate_gmail_with_token
 from email_service import get_email_content
 from ai_service import generate_reply, analyze_writing_style
 from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
 
 def register_routes(app):
     @app.route('/auth/token', methods=['POST'])
