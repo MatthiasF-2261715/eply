@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
@@ -66,6 +66,9 @@ export function useGmailApi(companyId: string = "default-company"): ApiResponse 
   
   const { user, signOut } = useAuth();
 
+  // Add a ref to track the last token verification time
+  const lastVerification = useRef<{ token: string; timestamp: number; isValid: boolean } | null>(null);
+
   // Cleans up email snippet text
   const cleanSnippet = (snippet: string): string => {
     if (!snippet) return '';
@@ -77,10 +80,18 @@ export function useGmailApi(companyId: string = "default-company"): ApiResponse 
     return cleaned;
   };
 
-  // Verifies if the user's token is valid 
+  // Verifies if the user's token is valid with caching
   const verifyUserToken = async (): Promise<boolean> => {
     if (!user || !user.accessToken) {
       return false;
+    }
+
+    // Use cached result if verified in the last 5 minutes
+    const now = Date.now();
+    if (lastVerification.current && 
+        lastVerification.current.token === user.accessToken && 
+        now - lastVerification.current.timestamp < 5 * 60 * 1000) {
+      return lastVerification.current.isValid;
     }
 
     try {
@@ -92,20 +103,18 @@ export function useGmailApi(companyId: string = "default-company"): ApiResponse 
         }
       });
 
-      if (!response.ok) {
-        throw new Error('Token validation failed');
-      }
+      const isValid = response.ok;
 
-      const data = await response.json();
-      
-      if (data.email && user.email && data.email !== user.email) {
-        console.error(`Token belongs to ${data.email} but current user is ${user.email}`);
-        return false;
-      }
-      
-      return true;
+      // Cache the verification result
+      lastVerification.current = {
+        token: user.accessToken,
+        timestamp: now,
+        isValid
+      };
+
+      return isValid;
     } catch (error) {
-      console.error('Error verifying token:', error);
+      console.error('Error verifying user token:', error);
       return false;
     }
   };

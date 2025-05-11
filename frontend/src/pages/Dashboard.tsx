@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Mail, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useGmailApi } from '../hooks/useGmailApi';
@@ -35,7 +35,8 @@ function Dashboard() {
     handleViewEmail,
     handleLoadMore,
     handleRefresh,
-    testTokenValidity
+    testTokenValidity,
+    verifyUserToken 
   } = useGmailApi();
 
   // --- STATE MANAGEMENT ---
@@ -43,6 +44,10 @@ function Dashboard() {
   const [showReplyModal, setShowReplyModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [tokenError, setTokenError] = useState<boolean>(false);
+
+  // Add a ref to track last email fetch time
+  const lastFetchTime = useRef<number>(0);
+  const tokenCheckInterval = useRef<NodeJS.Timeout | null>(null);
 
   // --- UTILITY FUNCTIONS ---
 
@@ -139,9 +144,13 @@ function Dashboard() {
     }
   }, [user]);
   
-  // Load emails when component mounts - with reduced refresh frequency
-  const loadEmails = useCallback(async () => {
-    if (!user) {
+  // Load emails when component mounts with controlled frequency
+  const loadEmails = useCallback(async (force = false) => {
+    if (!user) return;
+    
+    const now = Date.now();
+    // Only fetch if forced or it's been at least 2 minutes since last fetch
+    if (!force && now - lastFetchTime.current < 120000 && emails.length > 0) {
       return;
     }
     
@@ -168,28 +177,49 @@ function Dashboard() {
       }
 
       await fetchEmails();
+      lastFetchTime.current = now;
     } catch (error) {
-      console.error("Error during initial email loading:", error);
+      console.error("Error during email loading:", error);
       setTokenError(true);
     }
-  }, [user, fetchEmails, testTokenValidity]);
+  }, [user, fetchEmails, testTokenValidity, emails.length]);
 
-  // Initial load with delay to prevent constant refresh
+  // Initial email load with background validation
   useEffect(() => {
     let isMounted = true;
     
-    // Only load once when component mounts
-    const timer = setTimeout(() => {
+    // Set up initial load if emails are empty
+    const initialLoadTimer = setTimeout(() => {
       if (isMounted && emails.length === 0) {
-        loadEmails();
+        loadEmails(true);
       }
     }, 2000);
     
+    // Set up periodic token validation (once every 5 minutes) instead of constant refreshing
+    if (tokenCheckInterval.current) {
+      clearInterval(tokenCheckInterval.current);
+    }
+    
+    tokenCheckInterval.current = setInterval(() => {
+      if (isMounted && user) {
+        // Only verify token, don't auto-refresh
+        verifyUserToken().catch(err => {
+          console.error("Token validation error:", err);
+          if (err.message?.includes("invalid")) {
+            setTokenError(true);
+          }
+        });
+      }
+    }, 5 * 60 * 1000); // Check every 5 minutes
+    
     return () => {
       isMounted = false;
-      clearTimeout(timer);
+      clearTimeout(initialLoadTimer);
+      if (tokenCheckInterval.current) {
+        clearInterval(tokenCheckInterval.current);
+      }
     };
-  }, [loadEmails, emails.length]);
+  }, [loadEmails, emails.length, user, verifyUserToken]);
   
   // Handle token errors
   useEffect(() => {
