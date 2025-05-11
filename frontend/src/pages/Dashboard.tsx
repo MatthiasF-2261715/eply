@@ -188,74 +188,35 @@ function Dashboard() {
   useEffect(() => {
     let isMounted = true;
     
-    // Set up initial load if emails are empty
+    // Set up initial load if emails zijn leeg
     const initialLoadTimer = setTimeout(() => {
       if (isMounted && emails.length === 0) {
         loadEmails(true);
       }
     }, 2000);
-    
-    // Set up periodic token validation (every 15 minutes) instead of frequent refreshing
+
+    // Set up periodic token validation (elke 15 minuten)
     if (tokenCheckInterval.current) {
       clearInterval(tokenCheckInterval.current);
     }
-    
-    // Only set up token validation if we don't already have a cached validation result
+
     const setupTokenValidation = async () => {
       if (!isMounted) return;
-      
-      // We'll only set up the interval check if we haven't validated the token yet
-      // This prevents unnecessary interval setup
       tokenCheckInterval.current = setInterval(() => {
-        if (isMounted && user) {
-          // Only perform validation if user is active (has interacted with the page recently)
-          // This adds another layer of protection against unnecessary calls
-          const lastUserActivity = localStorage.getItem('lastUserActivity');
-          const now = Date.now();
-          if (lastUserActivity && (now - parseInt(lastUserActivity, 10) < 30 * 60 * 1000)) {
-            console.log("Scheduled token validation");
-            verifyUserToken().catch(err => {
-              console.error("Token validation error:", err);
-              if (err.message?.includes("invalid")) {
-                setTokenError(true);
-              }
-            });
-          }
-        }
-      }, 15 * 60 * 1000); // Check every 15 minutes instead of 5
+        verifyUserToken();
+      }, 15 * 60 * 1000);
     };
-    
-    // Don't set up interval immediately, wait a bit to let initial page load complete
-    const setupTimer = setTimeout(() => {
-      setupTokenValidation();
-    }, 5000);
-    
-    // Track user activity
-    const trackActivity = () => {
-      localStorage.setItem('lastUserActivity', Date.now().toString());
-    };
-    
-    // Set up activity tracking
-    window.addEventListener('click', trackActivity);
-    window.addEventListener('keydown', trackActivity);
-    window.addEventListener('mousemove', trackActivity);
-    
-    // Set initial activity timestamp
-    trackActivity();
-    
+    setupTokenValidation();
+
     return () => {
       isMounted = false;
       clearTimeout(initialLoadTimer);
-      clearTimeout(setupTimer);
       if (tokenCheckInterval.current) {
         clearInterval(tokenCheckInterval.current);
       }
-      window.removeEventListener('click', trackActivity);
-      window.removeEventListener('keydown', trackActivity);
-      window.removeEventListener('mousemove', trackActivity);
     };
-  }, [loadEmails, user, verifyUserToken]);
-  
+  }, [user, loadEmails, verifyUserToken]);
+
   // Handle token errors
   useEffect(() => {
     if (tokenError && user) {
