@@ -254,7 +254,7 @@ function Dashboard() {
       window.removeEventListener('keydown', trackActivity);
       window.removeEventListener('mousemove', trackActivity);
     };
-  }, [loadEmails, emails.length, user, verifyUserToken]);
+  }, [loadEmails, user, verifyUserToken]);
   
   // Handle token errors
   useEffect(() => {
