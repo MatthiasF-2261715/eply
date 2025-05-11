@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Mail, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useGmailApi } from '../hooks/useGmailApi';
@@ -139,62 +139,58 @@ function Dashboard() {
     }
   }, [user]);
   
-  // Load emails when component mounts
+  // Load emails when component mounts - with reduced refresh frequency
+  const loadEmails = useCallback(async () => {
+    if (!user) {
+      return;
+    }
+    
+    try {
+      let googleToken = user.userMetadata?.provider_token;
+      
+      if (!googleToken) {
+        const storedToken = localStorage.getItem('gmail_provider_token');
+        googleToken = storedToken || undefined;
+      }
+      
+      if (!googleToken) {
+        googleToken = user.accessToken;
+        console.log("Using user accessToken as fallback for Gmail API");
+      }
+      
+      if (!googleToken) {
+        throw new Error("No valid Google access token found. Please re-login.");
+      }
+      
+      const isValid = await testTokenValidity(googleToken);
+      if (!isValid) {
+        throw new Error("Google token is invalid or expired.");
+      }
+
+      await fetchEmails();
+    } catch (error) {
+      console.error("Error during initial email loading:", error);
+      setTokenError(true);
+    }
+  }, [user, fetchEmails, testTokenValidity]);
+
+  // Initial load with delay to prevent constant refresh
   useEffect(() => {
     let isMounted = true;
     
-    const loadEmails = async () => {
-      if (!user) {
-        return;
-      }
-      
-      if (isMounted) {
-        try {
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          
-          let googleToken = user.userMetadata?.provider_token;
-          
-          if (!googleToken) {
-            const storedToken = localStorage.getItem('gmail_provider_token');
-            googleToken = storedToken || undefined;
-          }
-          
-          if (!googleToken) {
-            googleToken = user.accessToken;
-            console.log("Using user accessToken as fallback for Gmail API");
-          }
-          
-          if (!googleToken) {
-            throw new Error("No valid Google access token found. Please re-login.");
-          }
-          
-          const isValid = await testTokenValidity(googleToken);
-          if (!isValid) {
-            throw new Error("Google token is invalid or expired.");
-          }
-  
-          if (isMounted) {
-            await fetchEmails();
-          }
-        } catch (error) {
-          console.error("Error during initial email loading:", error);
-          if (isMounted) {
-            setTokenError(true);
-          }
-        }
-      }
-    };
-    
+    // Only load once when component mounts
     const timer = setTimeout(() => {
-      loadEmails();
+      if (isMounted && emails.length === 0) {
+        loadEmails();
+      }
     }, 2000);
     
     return () => {
       isMounted = false;
       clearTimeout(timer);
     };
-  }, [user, fetchEmails, testTokenValidity]);
-
+  }, [loadEmails, emails.length]);
+  
   // Handle token errors
   useEffect(() => {
     if (tokenError && user) {
