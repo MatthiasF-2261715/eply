@@ -11,11 +11,10 @@ const { REDIRECT_URI, POST_LOGOUT_REDIRECT_URI } = require('../authConfig');
 const router = express.Router();
 
 router.get('/signin', (req, res, next) => {
-    console.log('Signin route accessed');
     authProvider.login({
         scopes: [],
         redirectUri: REDIRECT_URI,
-        successRedirect: '/'
+        successRedirect: 'http://localhost:3000/dashboard'
     })(req, res, next);
 });
 

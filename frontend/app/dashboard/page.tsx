@@ -32,6 +32,7 @@ export default function Dashboard() {
             <Button
               variant="outline"
               className="hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors"
+              onClick={() => window.location.href = 'http://localhost:4000/auth/signout'}
             >
               Uitloggen
             </Button>
