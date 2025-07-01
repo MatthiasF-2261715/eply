@@ -14,14 +14,14 @@ router.get('/signin', (req, res, next) => {
     authProvider.login({
         scopes: [],
         redirectUri: REDIRECT_URI,
-        successRedirect: 'http://localhost:3000/dashboard'
+        successRedirect: 'http://localhost:4000/auth/acquireToken'
     })(req, res, next);
 });
 
 router.get('/acquireToken', authProvider.acquireToken({
     scopes: ['User.Read'],
     redirectUri: REDIRECT_URI,
-    successRedirect: '/users/profile'
+    successRedirect: 'http://localhost:3000/dashboard'
 }));
 
 router.post('/redirect', authProvider.handleRedirect());

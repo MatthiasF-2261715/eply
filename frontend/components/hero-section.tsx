@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Mail, Sparkles } from 'lucide-react';
@@ -7,7 +8,20 @@ import { useRouter } from 'next/navigation';
 
 export function HeroSection() {
   const router = useRouter();
-  const { signIn = false, loading = false } = {};
+  const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    fetch('http://localhost:4000/users/profile', { credentials: 'include' })
+      .then(res => {
+        console.log(res.status);
+        if (res.status === 200) {
+          setIsAuthenticated(true);
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
 
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden pt-8">
@@ -54,16 +68,27 @@ export function HeroSection() {
           transition={{ duration: 0.8, delay: 0.2 }}
           className="flex flex-col sm:flex-row gap-4 justify-center items-center"
         >
-          <Button
-            disabled={loading}
-            size="lg"
-            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-            onClick={() => window.location.href = 'http://localhost:4000/auth/signin'}
-          >
-            <Mail className="w-5 h-5 mr-2" />
-            {loading ? 'Inloggen...' : 'Login met Outlook'}
-            <ArrowRight className="w-5 h-5 ml-2" />
-          </Button>
+          {isAuthenticated ? (
+            <Button
+              size="lg"
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+              onClick={() => router.push('/dashboard')}
+            >
+              <ArrowRight className="w-5 h-5 mr-2" />
+              Dashboard
+            </Button>
+          ) : (
+            <Button
+              disabled={loading}
+              size="lg"
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+              onClick={() => window.location.href = 'http://localhost:4000/auth/signin'}
+            >
+              <Mail className="w-5 h-5 mr-2" />
+              {loading ? 'Laden...' : 'Login met Outlook'}
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </Button>
+          )}
                     
           <Button
             variant="outline"

@@ -27,13 +27,25 @@ router.get('/id',
 );
 
 router.get('/profile',
-    isAuthenticated, // check if user is authenticated
+    isAuthenticated,
     async function (req, res, next) {
         try {
+            if (!req.session.accessToken) {
+                console.error('No access token in session');
+                return res.status(401).json({ error: 'No access token in session' });
+            }
             const graphResponse = await fetch(GRAPH_ME_ENDPOINT, req.session.accessToken);
-            res.render('profile', { profile: graphResponse });
+            res.json({ 
+                profile: graphResponse,
+                username: graphResponse.displayName || graphResponse.mail || graphResponse.userPrincipalName
+            });
         } catch (error) {
-            next(error);
+            if (error.message && error.message.includes('401')) {
+                // Token verlopen of ongeldig
+                return res.status(401).json({ error: 'Access token expired or invalid' });
+            }
+            console.error('Error fetching profile:', error);
+            res.status(500).json({ error: 'Error fetching profile' });
         }
     }
 );

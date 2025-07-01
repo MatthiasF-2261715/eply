@@ -5,10 +5,39 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Mail, Settings, BarChart3, Clock, Users, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function Dashboard() {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [username, setUsername] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('http://localhost:4000/users/profile', {
+      credentials: 'include',
+    })
+      .then(async res => {
+        console.log(res);
+        if (res.status === 401 || res.redirected) {
+          router.replace('/');
+        } else {
+          const data = await res.json();
+          setUsername(data.username);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        router.replace('/');
+      });
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <span className="text-gray-500 text-lg">Laden...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 pt-24 pb-12">
@@ -26,7 +55,7 @@ export default function Dashboard() {
                 Welkom bij je Dashboard
               </h1>
               <p className="text-xl text-gray-600">
-                Hallo Gebruiker! Hier komen later je e-mails en draft-functies.
+                {username ? `Hallo ${username}! Hier komen later je e-mails en draft-functies.` : 'Hallo Gebruiker! Hier komen later je e-mails en draft-functies.'}
               </p>
             </div>
             <Button
