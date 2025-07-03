@@ -11,13 +11,15 @@ export default function Dashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState<string | null>(null);
+  const [emails, setEmails] = useState<any[]>([]);
+  const [emailsLoading, setEmailsLoading] = useState(true);
+  const [emailsError, setEmailsError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('http://localhost:4000/users/profile', {
       credentials: 'include',
     })
       .then(async res => {
-        console.log(res);
         if (res.status === 401 || res.redirected) {
           router.replace('/');
         } else {
@@ -30,6 +32,28 @@ export default function Dashboard() {
         router.replace('/');
       });
   }, [router]);
+
+  useEffect(() => {
+    setEmailsLoading(true);
+    fetch('http://localhost:4000/users/mails', {
+      credentials: 'include',
+    })
+      .then(async res => {
+        if (res.status === 401 || res.redirected) {
+          setEmailsError('Niet ingelogd of sessie verlopen.');
+          setEmails([]);
+        } else {
+          const data = await res.json();
+          setEmails(data.mails || []);
+        }
+        setEmailsLoading(false);
+      })
+      .catch(() => {
+        setEmailsError('Fout bij ophalen van e-mails.');
+        setEmails([]);
+        setEmailsLoading(false);
+      });
+  }, []);
 
   if (loading) {
     return (
@@ -138,30 +162,35 @@ export default function Dashboard() {
                   Recente E-mail Activiteit
                 </CardTitle>
                 <CardDescription>
-                  Hier verschijnen binnenkort je laatste e-mails en gegenereerde draft-replies
+                  Hier verschijnen je laatste e-mails en gegenereerde draft-replies
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {/* Placeholder email items */}
-                  {[
-                    { from: 'john.doe@example.com', subject: 'Meeting Request', time: '2 min geleden' },
-                    { from: 'sarah.smith@company.com', subject: 'Project Update', time: '15 min geleden' },
-                    { from: 'info@newsletter.com', subject: 'Weekly Newsletter', time: '1 uur geleden' },
-                  ].map((email, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900">{email.subject}</p>
-                        <p className="text-sm text-gray-600">Van: {email.from}</p>
+                  {emailsLoading ? (
+                    <div className="text-gray-500">E-mails laden...</div>
+                  ) : emailsError ? (
+                    <div className="text-red-500">{emailsError}</div>
+                  ) : emails.length === 0 ? (
+                    <div className="text-gray-500">Geen e-mails gevonden.</div>
+                  ) : (
+                    emails.map((email, index) => (
+                      <div key={email.id || index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900">{email.subject || '(Geen onderwerp)'}</p>
+                          <p className="text-sm text-gray-600">Van: {email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Onbekend'}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-gray-500">
+                            {email.receivedDateTime ? new Date(email.receivedDateTime).toLocaleString('nl-NL', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }) : ''}
+                          </p>
+                          <Button size="sm" variant="ghost" className="mt-1">
+                            <ArrowRight className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm text-gray-500">{email.time}</p>
-                        <Button size="sm" variant="ghost" className="mt-1">
-                          <ArrowRight className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>

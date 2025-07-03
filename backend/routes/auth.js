@@ -12,14 +12,14 @@ const router = express.Router();
 
 router.get('/signin', (req, res, next) => {
     authProvider.login({
-        scopes: [],
+        scopes: ["openid", "profile", "User.Read", "Mail.Read"],
         redirectUri: REDIRECT_URI,
         successRedirect: 'http://localhost:4000/auth/acquireToken'
     })(req, res, next);
 });
 
 router.get('/acquireToken', authProvider.acquireToken({
-    scopes: ['User.Read'],
+    scopes: ["openid", "profile", "User.Read", "Mail.Read"],
     redirectUri: REDIRECT_URI,
     successRedirect: 'http://localhost:3000/dashboard'
 }));

@@ -50,4 +50,26 @@ router.get('/profile',
     }
 );
 
+router.get('/mails',
+    isAuthenticated,
+    async function (req, res, next) {
+        try {
+            if (!req.session.accessToken) {
+                console.error('No access token in session');
+                return res.status(401).json({ error: 'No access token in session' });
+            }
+            const mailsEndpoint = 'https://graph.microsoft.com/v1.0/me/messages?$top=10&$orderby=receivedDateTime desc';
+            const mailsResponse = await fetch(mailsEndpoint, req.session.accessToken);
+            res.json({ mails: mailsResponse.value });
+        } catch (error) {
+            if (error.status === 401) {
+                console.error(error);
+                return res.status(401).json({ error: 'Access token expired or invalid' });
+            }
+            console.error('Error fetching mails:', error);
+            res.status(500).json({ error: 'Error fetching mails' });
+        }
+    }
+);
+
 module.exports = router;

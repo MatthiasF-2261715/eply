@@ -21,9 +21,13 @@ async function fetch(endpoint, accessToken) {
 
     try {
         const response = await axios.get(endpoint, options);
-        return await response.data;
+        return response.data;
     } catch (error) {
-        throw new Error(error);
+        if (error.response) {
+            // Geef de status en data door
+            throw { status: error.response.status, data: error.response.data };
+        }
+        throw error;
     }
 }
 
