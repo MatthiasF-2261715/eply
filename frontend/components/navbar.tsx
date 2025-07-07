@@ -11,6 +11,7 @@ export function Navbar() {
   const navItems = [
     { href: '/', label: 'Home' },
     { href: '/dashboard', label: 'Dashboard' },
+    { href: '/login', label: 'Login' }
   ];
 
   return (
