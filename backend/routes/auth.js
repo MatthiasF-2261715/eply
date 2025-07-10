@@ -11,7 +11,7 @@ const { REDIRECT_URI, POST_LOGOUT_REDIRECT_URI } = require('../authConfig');
 
 const router = express.Router();
 
-router.get('/signin', (req, res, next) => {
+router.get('/outlook-login', (req, res, next) => {
     authProvider.login({
         scopes: ["openid", "profile", "User.Read", "Mail.Read"],
         redirectUri: REDIRECT_URI,
@@ -39,6 +39,7 @@ router.post('/imap-login', async (req, res) => {
         // Sessie opslaan
         req.session.isAuthenticated = true;
         req.session.imap = { email, password, imapServer, port };
+        req.session.method = 'imap';
         imap.end();
         res.json({ success: true });
     });
@@ -58,8 +59,20 @@ router.get('/acquireToken', authProvider.acquireToken({
 
 router.post('/redirect', authProvider.handleRedirect());
 
-router.get('/signout', authProvider.logout({
-    postLogoutRedirectUri: POST_LOGOUT_REDIRECT_URI
-}));
+router.get('/signout', (req, res, next) => {
+    if (req.session.method === 'outlook') {
+        authProvider.logout({
+            postLogoutRedirectUri: POST_LOGOUT_REDIRECT_URI
+        })(req, res, next);
+    } else if (req.session.method === 'imap') {
+        req.session.destroy(() => {
+            res.redirect(POST_LOGOUT_REDIRECT_URI); // of res.json({ success: true });
+        });
+    } else {
+        req.session.destroy(() => {
+            res.redirect(POST_LOGOUT_REDIRECT_URI);
+        });
+    }
+});
 
 module.exports = router;

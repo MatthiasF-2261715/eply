@@ -204,6 +204,8 @@ class AuthProvider {
                 challenge: challenge,
             };
 
+            req.session.method = 'outlook';
+
             /**
              * By manipulating the request objects below before each request, we can obtain
              * auth artifacts with desired claims. For more information, visit:

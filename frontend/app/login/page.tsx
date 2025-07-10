@@ -10,7 +10,7 @@ export default function LoginPage() {
         <div className="flex flex-col gap-4">
           <button
             type="button"
-            onClick={() => window.location.href = 'http://localhost:4000/auth/signin'}
+            onClick={() => window.location.href = 'http://localhost:4000/auth/outlook-login'}
             className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition"
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">

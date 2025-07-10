@@ -16,7 +16,7 @@ export default function Dashboard() {
   const [emailsError, setEmailsError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('http://localhost:4000/users/profile-imap', {
+    fetch('http://localhost:4000/users/profile', {
       credentials: 'include',
     })
       .then(async res => {
@@ -35,7 +35,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     setEmailsLoading(true);
-    fetch('http://localhost:4000/users/mails-imap', {
+    fetch('http://localhost:4000/users/mails', {
       credentials: 'include',
     })
       .then(async res => {
@@ -45,6 +45,7 @@ export default function Dashboard() {
         } else {
           const data = await res.json();
           setEmails(Array.isArray(data) ? data : data.mails || []);
+          console.log('Fetched emails:', data);
         }
         setEmailsLoading(false);
       })
@@ -54,10 +55,6 @@ export default function Dashboard() {
         setEmailsLoading(false);
       });
   }, []);
-
-  useEffect(() => {
-    console.log('emails state:', emails);
-  }, [emails]);
 
   if (loading) {
     return (

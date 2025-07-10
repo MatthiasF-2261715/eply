@@ -82,7 +82,7 @@ export function HeroSection() {
               disabled={loading}
               size="lg"
               className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-              onClick={() => window.location.href = 'http://localhost:4000/auth/signin'}
+              onClick={() => window.location.href = 'http://localhost:4000/auth/outlook-login'}
             >
               <Mail className="w-5 h-5 mr-2" />
               {loading ? 'Laden...' : 'Login met Outlook'}
