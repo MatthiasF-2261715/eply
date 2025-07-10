@@ -8,6 +8,8 @@ var router = express.Router();
 
 var fetch = require('../fetch');
 
+const Imap = require('imap');
+
 var { GRAPH_ME_ENDPOINT } = require('../authConfig');
 
 // custom middleware to check auth state
@@ -50,6 +52,75 @@ router.get('/profile',
     }
 );
 
+router.get('/profile-imap', (req, res) => {
+    if (!req.session.isAuthenticated || !req.session.imap) {
+        return res.status(401).json({ error: 'Niet ingelogd via IMAP.' });
+    }
+    const { email, imapServer } = req.session.imap;
+    res.json({
+        profile: {
+            email,
+            imapServer
+        },
+        username: email
+    });
+});
+
+router.get('/mails-imap', (req, res) => {
+  if (!req.session.isAuthenticated || !req.session.imap) {
+    return res.status(401).json({ error: 'Niet ingelogd via IMAP.' });
+  }
+
+  const { email, password, imapServer, port } = req.session.imap;
+  const imap = new Imap({
+    user: email,
+    password: password,
+    host: imapServer,
+    port: parseInt(port, 10),
+    tls: true
+  });
+
+  imap.once('ready', function() {
+    imap.openBox('INBOX', true, (err, box) => {
+      if (err) {
+        imap.end();
+        return res.status(500).json({ error: 'Kan mailbox niet openen.' });
+      }
+      // Hier kun je mails ophalen, bijvoorbeeld de eerste 10:
+      const f = imap.seq.fetch('1:10', { bodies: ['HEADER.FIELDS (FROM SUBJECT DATE)'], struct: true });
+      const mails = [];
+      f.on('message', (msg) => {
+        let mail = {};
+        msg.on('body', (stream) => {
+          let buffer = '';
+          stream.on('data', (chunk) => buffer += chunk.toString('utf8'));
+          stream.on('end', () => {
+            mail.header = Imap.parseHeader(buffer);
+          });
+        });
+        msg.once('attributes', (attrs) => {
+          mail.attrs = attrs;
+        });
+        msg.once('end', () => {
+          mails.push(mail);
+        });
+      });
+      f.once('end', () => {
+        imap.end();
+        console.log('Mails opgehaald:', mails);
+        res.json(mails);
+      });
+    });
+  });
+
+  imap.once('error', function(err) {
+    res.status(500).json({ error: 'IMAP fout: ' + err.message });
+  });
+
+  imap.connect();
+});
+
+
 router.get('/mails',
     isAuthenticated,
     async function (req, res, next) {
@@ -71,5 +142,57 @@ router.get('/mails',
         }
     }
 );
+
+router.get('/mails-imap', (req, res) => {
+    if (!req.session.isAuthenticated || !req.session.imap) {
+        return res.status(401).json({ error: 'Niet ingelogd via IMAP.' });
+    }
+
+    const { email, password, imapServer, port } = req.session.imap;
+    const imap = new Imap({
+        user: email,
+        password: password,
+        host: imapServer,
+        port: parseInt(port, 10),
+        tls: true
+    });
+
+    imap.once('ready', function() {
+        imap.openBox('INBOX', true, (err, box) => {
+            if (err) {
+                imap.end();
+                return res.status(500).json({ error: 'Kan mailbox niet openen.' });
+            }
+            const f = imap.seq.fetch('1:10', { bodies: ['HEADER.FIELDS (FROM SUBJECT DATE)'], struct: true });
+            const mails = [];
+            f.on('message', (msg) => {
+                let mail = {};
+                msg.on('body', (stream) => {
+                    let buffer = '';
+                    stream.on('data', (chunk) => buffer += chunk.toString('utf8'));
+                    stream.on('end', () => {
+                        mail.header = Imap.parseHeader(buffer);
+                    });
+                });
+                msg.once('attributes', (attrs) => {
+                    mail.attrs = attrs;
+                });
+                msg.once('end', () => {
+                    mails.push(mail);
+                });
+            });
+            f.once('end', () => {
+                imap.end();
+                res.json(mails);
+            });
+        });
+    });
+
+    imap.once('error', function(err) {
+        res.status(500).json({ error: 'IMAP fout: ' + err.message });
+    });
+
+    imap.connect();
+});
 
 module.exports = router;

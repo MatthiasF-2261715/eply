@@ -20,17 +20,32 @@ export default function ImapLoginPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
-    // Hier zou je een echte API-call doen
     if (!form.email || !form.password || !form.imapServer || !form.port) {
       setError('Vul alle velden in.');
       setLoading(false);
       return;
     }
-    // Dummy login simulatie
-    setTimeout(() => {
-      setLoading(false);
-      setError('Inloggen mislukt. Controleer je gegevens.');
-    }, 1200);
+    try {
+      const res = await fetch('http://localhost:4000/auth/imap-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // belangrijk voor cookies/sessie
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      console.log(data);
+      if (res.ok) {
+        // Succesvol ingelogd, eventueel redirecten
+        window.location.href = '/dashboard';
+      } else {
+        setError(data.error || 'Inloggen mislukt.');
+      }
+    } catch (err) {
+      setError('Er is een fout opgetreden. Probeer opnieuw.');
+    }
+    setLoading(false);
   };
 
   return (

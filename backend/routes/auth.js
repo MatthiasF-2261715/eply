@@ -6,6 +6,7 @@
 var express = require('express');
 
 const authProvider = require('../auth/AuthProvider');
+const Imap = require('imap');
 const { REDIRECT_URI, POST_LOGOUT_REDIRECT_URI } = require('../authConfig');
 
 const router = express.Router();
@@ -16,6 +17,37 @@ router.get('/signin', (req, res, next) => {
         redirectUri: REDIRECT_URI,
         successRedirect: 'http://localhost:4000/auth/acquireToken'
     })(req, res, next);
+});
+
+router.post('/imap-login', async (req, res) => {
+    const { email, password, imapServer, port } = req.body;
+    console.log(req.body);
+    if (!email || !password || !imapServer || !port) {
+        return res.status(400).json({ error: 'Vul alle velden in.' });
+    }
+
+    const imap = new Imap({
+        user: email,
+        password: password,
+        host: imapServer,
+        port: parseInt(port, 10),
+        tls: true,
+        tlsOptions: { rejectUnauthorized: false }
+    });
+
+    imap.once('ready', function() {
+        // Sessie opslaan
+        req.session.isAuthenticated = true;
+        req.session.imap = { email, password, imapServer, port };
+        imap.end();
+        res.json({ success: true });
+    });
+
+    imap.once('error', function(err) {
+        res.status(401).json({ error: 'IMAP inloggen mislukt: ' + err.message });
+    });
+
+    imap.connect();
 });
 
 router.get('/acquireToken', authProvider.acquireToken({

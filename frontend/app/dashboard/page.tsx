@@ -16,7 +16,7 @@ export default function Dashboard() {
   const [emailsError, setEmailsError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('http://localhost:4000/users/profile', {
+    fetch('http://localhost:4000/users/profile-imap', {
       credentials: 'include',
     })
       .then(async res => {
@@ -35,7 +35,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     setEmailsLoading(true);
-    fetch('http://localhost:4000/users/mails', {
+    fetch('http://localhost:4000/users/mails-imap', {
       credentials: 'include',
     })
       .then(async res => {
@@ -44,7 +44,7 @@ export default function Dashboard() {
           setEmails([]);
         } else {
           const data = await res.json();
-          setEmails(data.mails || []);
+          setEmails(Array.isArray(data) ? data : data.mails || []);
         }
         setEmailsLoading(false);
       })
@@ -54,6 +54,10 @@ export default function Dashboard() {
         setEmailsLoading(false);
       });
   }, []);
+
+  useEffect(() => {
+    console.log('emails state:', emails);
+  }, [emails]);
 
   if (loading) {
     return (
@@ -174,22 +178,28 @@ export default function Dashboard() {
                   ) : emails.length === 0 ? (
                     <div className="text-gray-500">Geen e-mails gevonden.</div>
                   ) : (
-                    emails.map((email, index) => (
-                      <div key={email.id || index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                        <div className="flex-1">
-                          <p className="font-medium text-gray-900">{email.subject || '(Geen onderwerp)'}</p>
-                          <p className="text-sm text-gray-600">Van: {email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Onbekend'}</p>
+                    emails.map((email, index) => {
+                      const subject = email.header?.subject?.[0] || '(Geen onderwerp)';
+                      const from = email.header?.from?.[0] || 'Onbekend';
+                      const rawDate = email.header?.date?.[0];
+                      const date = rawDate
+                        ? new Date(rawDate).toLocaleString('nl-NL', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })
+                        : '';
+                      return (
+                        <div key={email.attrs?.uid || index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900">{subject}</p>
+                            <p className="text-sm text-gray-600">Van: {from}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-gray-500">{date}</p>
+                            <Button size="sm" variant="ghost" className="mt-1">
+                              <ArrowRight className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm text-gray-500">
-                            {email.receivedDateTime ? new Date(email.receivedDateTime).toLocaleString('nl-NL', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }) : ''}
-                          </p>
-                          <Button size="sm" variant="ghost" className="mt-1">
-                            <ArrowRight className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </CardContent>
