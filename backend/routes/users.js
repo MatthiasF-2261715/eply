@@ -13,6 +13,31 @@ function isAuthenticated(req, res, next) {
     next();
 };
 
+function transformMail(mail, method) {
+    if (method === 'outlook') {
+        return {
+            id: mail.id,
+            from: mail.from?.emailAddress?.address || null,
+            to: mail.toRecipients?.map(r => r.emailAddress?.address).join(', ') || null,
+            subject: mail.subject || '',
+            date: mail.receivedDateTime || '',
+            snippet: mail.bodyPreview || '',
+            raw: mail
+        };
+    } else if (method === 'imap') {
+        return {
+            id: mail.attrs?.uid ? String(mail.attrs.uid) : null,
+            from: Array.isArray(mail.header?.from) ? mail.header.from.join(', ') : '',
+            to: Array.isArray(mail.header?.to) ? mail.header.to.join(', ') : null,
+            subject: Array.isArray(mail.header?.subject) ? mail.header.subject.join(' ') : '',
+            date: Array.isArray(mail.header?.date) ? mail.header.date[0] : '',
+            snippet: '', // IMAP headers bevatten geen snippet/body preview
+            raw: mail
+        };
+    }
+    return mail;
+}
+
 router.get('/id',
     isAuthenticated,
     async function (req, res, next) {
@@ -59,7 +84,8 @@ router.get('/mails', isAuthenticated, async function (req, res, next) {
             }
             const mailsEndpoint = 'https://graph.microsoft.com/v1.0/me/messages?$top=10&$orderby=receivedDateTime desc';
             const mailsResponse = await fetch(mailsEndpoint, req.session.accessToken);
-            res.json({ mails: mailsResponse.value });
+            const mails = (mailsResponse.value || []).map(mail => transformMail(mail, 'outlook'));
+            res.json({ mails });
         } catch (error) {
             if (error.status === 401) {
                 return res.status(401).json({ error: 'Access token expired or invalid' });
@@ -85,7 +111,7 @@ router.get('/mails', isAuthenticated, async function (req, res, next) {
                     imap.end();
                     return res.status(500).json({ error: 'Kan mailbox niet openen.' });
                 }
-                const f = imap.seq.fetch('1:10', { bodies: ['HEADER.FIELDS (FROM SUBJECT DATE)'], struct: true });
+                const f = imap.seq.fetch('1:10', { bodies: ['HEADER.FIELDS (FROM TO SUBJECT DATE)'], struct: true });
                 const mails = [];
                 f.on('message', (msg) => {
                     let mail = {};
@@ -100,12 +126,12 @@ router.get('/mails', isAuthenticated, async function (req, res, next) {
                         mail.attrs = attrs;
                     });
                     msg.once('end', () => {
-                        mails.push(mail);
+                        mails.push(transformMail(mail, 'imap'));
                     });
                 });
                 f.once('end', () => {
                     imap.end();
-                    res.json(mails);
+                    res.json({ mails });
                 });
             });
         });

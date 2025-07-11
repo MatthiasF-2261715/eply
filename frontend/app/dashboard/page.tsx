@@ -176,17 +176,19 @@ export default function Dashboard() {
                     <div className="text-gray-500">Geen e-mails gevonden.</div>
                   ) : (
                     emails.map((email, index) => {
-                      const subject = email.header?.subject?.[0] || '(Geen onderwerp)';
-                      const from = email.header?.from?.[0] || 'Onbekend';
-                      const rawDate = email.header?.date?.[0];
-                      const date = rawDate
-                        ? new Date(rawDate).toLocaleString('nl-NL', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })
+                      const subject = email.subject || '(Geen onderwerp)';
+                      const from = email.from || 'Onbekend';
+                      const to = email.to || '';
+                      const date = email.date
+                        ? new Date(email.date).toLocaleString('nl-NL', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })
                         : '';
                       return (
-                        <div key={email.attrs?.uid || index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <div key={email.id || index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                           <div className="flex-1">
                             <p className="font-medium text-gray-900">{subject}</p>
                             <p className="text-sm text-gray-600">Van: {from}</p>
+                            {to && <p className="text-xs text-gray-500">Naar: {to}</p>}
+                            {email.snippet && <p className="text-xs text-gray-400 mt-1">{email.snippet}</p>}
                           </div>
                           <div className="text-right">
                             <p className="text-sm text-gray-500">{date}</p>
