@@ -20,7 +20,7 @@ export default function Dashboard() {
       credentials: 'include',
     })
       .then(async res => {
-        if (res.status === 401 || res.redirected) {
+        if (!res.ok  || res.redirected) {
           router.replace('/');
         } else {
           const data = await res.json();

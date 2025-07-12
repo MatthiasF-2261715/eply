@@ -4,14 +4,30 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useState, useEffect } from 'react';
 
 export function Navbar() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    fetch('http://localhost:4000/users/profile', { credentials: 'include' })
+      .then(res => {
+        console.log(res.status);
+        if (res.status === 200) {
+          setIsAuthenticated(true);
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
   const pathname = usePathname();
 
   const navItems = [
-    { href: '/', label: 'Home' },
-    { href: '/dashboard', label: 'Dashboard' },
-    { href: '/login', label: 'Login' }
+    { href: '/', label: 'Home', show: true },
+    { href: '/dashboard', label: 'Dashboard', show: isAuthenticated },
+    { href: '/login', label: 'Login', show: !isAuthenticated }
   ];
 
   return (
@@ -25,7 +41,7 @@ export function Navbar() {
         <div className="flex items-center justify-between w-full">
           <span className="font-bold text-lg text-blue-700">Eply</span>
           <div className="flex items-center space-x-8 ml-8">
-            {navItems.map((item) => (
+            {navItems.filter(item => item.show).map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
