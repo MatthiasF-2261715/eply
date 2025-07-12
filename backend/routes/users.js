@@ -111,7 +111,14 @@ router.get('/mails', isAuthenticated, async function (req, res, next) {
                     imap.end();
                     return res.status(500).json({ error: 'Kan mailbox niet openen.' });
                 }
-                const f = imap.seq.fetch('1:10', { bodies: ['HEADER.FIELDS (FROM TO SUBJECT DATE)'], struct: true });
+                const total = box.messages.total;
+                if (total === 0) {
+                    imap.end();
+                    return res.json({ mails: [] });
+                }
+                const start = Math.max(1, total - 9);
+                const range = `${start}:${total}`;
+                const f = imap.seq.fetch(range, { bodies: ['HEADER.FIELDS (FROM TO SUBJECT DATE)'], struct: true });
                 const mails = [];
                 f.on('message', (msg) => {
                     let mail = {};
@@ -131,7 +138,8 @@ router.get('/mails', isAuthenticated, async function (req, res, next) {
                 });
                 f.once('end', () => {
                     imap.end();
-                    res.json({ mails });
+                    // Reverse zodat nieuwste eerst
+                    res.json({ mails: mails.reverse() });
                 });
             });
         });
