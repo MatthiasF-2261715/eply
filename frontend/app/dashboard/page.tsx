@@ -34,26 +34,34 @@ export default function Dashboard() {
   }, [router]);
 
   useEffect(() => {
-    setEmailsLoading(true);
-    fetch('http://localhost:4000/users/mails', {
-      credentials: 'include',
-    })
-      .then(async res => {
-        if (res.status === 401 || res.redirected) {
-          setEmailsError('Niet ingelogd of sessie verlopen.');
-          setEmails([]);
-        } else {
-          const data = await res.json();
-          setEmails(Array.isArray(data) ? data : data.mails || []);
-          console.log('Fetched emails:', data);
-        }
-        setEmailsLoading(false);
+    let intervalId: NodeJS.Timeout;
+
+    const fetchEmails = () => {
+      setEmailsLoading(true);
+      fetch('http://localhost:4000/users/mails', {
+        credentials: 'include',
       })
-      .catch(() => {
-        setEmailsError('Fout bij ophalen van e-mails.');
-        setEmails([]);
-        setEmailsLoading(false);
-      });
+        .then(async res => {
+          if (!res.ok || res.redirected) {
+            setEmailsError('Niet ingelogd of sessie verlopen.');
+            setEmails([]);
+          } else {
+            const data = await res.json();
+            setEmails(Array.isArray(data) ? data : data.mails || []);
+          }
+          setEmailsLoading(false);
+        })
+        .catch(() => {
+          setEmailsError('Fout bij ophalen van e-mails.');
+          setEmails([]);
+          setEmailsLoading(false);
+        });
+    };
+
+    fetchEmails(); // initial fetch
+    intervalId = setInterval(fetchEmails, 10000); // elke 10 seconden
+
+    return () => clearInterval(intervalId);
   }, []);
 
   if (loading) {
@@ -167,10 +175,8 @@ export default function Dashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {emailsLoading ? (
-                    <div className="text-gray-500">E-mails laden...</div>
-                  ) : emailsError ? (
+                <div className="space-y-4 relative">
+                  {emailsError ? (
                     <div className="text-red-500">{emailsError}</div>
                   ) : emails.length === 0 ? (
                     <div className="text-gray-500">Geen e-mails gevonden.</div>
