@@ -59,7 +59,7 @@ export default function Dashboard() {
     };
 
     fetchEmails(); // initial fetch
-    intervalId = setInterval(fetchEmails, 10000); // elke 10 seconden
+    intervalId = setInterval(fetchEmails, 60000); // elke 10 seconden
 
     return () => clearInterval(intervalId);
   }, []);
