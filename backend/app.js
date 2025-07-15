@@ -14,6 +14,8 @@ const authRouter = require('./routes/auth');
 
 const app = express();
 
+const { Pool } = require('pg');
+
 app.use(cors({
   origin: 'http://localhost:3000',
   credentials: true
@@ -52,7 +54,19 @@ app.use(function (err, req, res, next) {
     });
 });
 
-
-app.listen(process.env.PORT, () => {
-  console.log(`Server running on http://localhost:${process.env.PORT}`);
-});
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+  });
+  
+  pool.connect()
+    .then(client => {
+      client.release();
+      app.listen(process.env.PORT, () => {
+        console.log(`Server running on http://localhost:${process.env.PORT}`);
+      });
+    })
+    .catch(err => {
+      console.error('Database connection error:', err.stack);
+      process.exit(1);
+    });
+  
