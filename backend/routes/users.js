@@ -5,6 +5,9 @@ var fetch = require('../fetch');
 const Imap = require('imap');
 var { GRAPH_ME_ENDPOINT } = require('../authConfig');
 
+const { getAssistantByEmail } = require('../database');
+const { useAssistant } = require('../assistant');
+
 // custom middleware to check auth state
 function isAuthenticated(req, res, next) {
     if (!req.session.isAuthenticated) {
@@ -151,6 +154,32 @@ router.get('/mails', isAuthenticated, async function (req, res, next) {
         imap.connect();
     } else {
         res.status(401).json({ error: 'Niet ingelogd.' });
+    }
+});
+
+
+function extractEmail(str) {
+    const match = str.match(/<([^>]+)>/);
+    if (match) return match[1].trim();
+    return str.trim();
+}
+
+router.post('/ai/reply', isAuthenticated, async function (req, res) {
+    let { email, content } = req.body;
+    if (!email || !content) {
+        return res.status(400).json({ error: 'Email en content zijn verplicht.' });
+    }
+    email = extractEmail(email);
+    try {
+        console.log('EMAIL:', { email, content });
+        const assistantObj = await getAssistantByEmail(email);
+        const assistantId = assistantObj.assistant_id || assistantObj.id; // <-- alleen de string!
+        console.log('Assistant ID:', assistantId);
+        const aiResponse = await useAssistant(assistantId, content);
+        console.log('AI Response:', aiResponse);
+        res.json({ response: aiResponse });
+    } catch (err) {
+        res.status(500).json({ error: err.message || 'AI response error' });
     }
 });
 

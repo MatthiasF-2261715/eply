@@ -24,6 +24,7 @@ export default function Dashboard() {
           router.replace('/');
         } else {
           const data = await res.json();
+          console.log('User profile data:', data['profile']['email']);
           setUsername(data.username);
           setLoading(false);
         }
@@ -63,6 +64,36 @@ export default function Dashboard() {
 
     return () => clearInterval(intervalId);
   }, []);
+
+  const handleGenerateReply = async () => {
+    if (!emails.length) return;
+    const lastEmail = emails[0];
+    // Pas deze velden aan afhankelijk van je e-mailstructuur
+    const emailAddress = lastEmail.from?.address || lastEmail.from || '';
+    const content = lastEmail.snippet || lastEmail.body || lastEmail.subject || '';
+
+    if (!emailAddress || !content) {
+      console.log('Geen geldig e-mailadres of content gevonden.');
+      return;
+    }
+
+    try {
+      const res = await fetch('http://localhost:4000/users/ai/reply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          email: emailAddress,
+          content: content,
+        }),
+      });
+      const data = await res.json();
+      console.log('AI reply:', data.response || data.error);
+      // Je kunt hier eventueel een state zetten om het antwoord te tonen in de UI
+    } catch (err) {
+      console.error('Fout bij AI reply ophalen:', err);
+    }
+  };
 
   if (loading) {
     return (
@@ -175,6 +206,13 @@ export default function Dashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                <Button
+                  className="mb-4"
+                  variant="outline"
+                  onClick={handleGenerateReply}
+                >
+                  Genereer AI Antwoord op Laatste E-mail
+                </Button>
                 <div className="space-y-4 relative">
                   {emailsError ? (
                     <div className="text-red-500">{emailsError}</div>
