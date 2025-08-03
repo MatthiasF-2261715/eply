@@ -32,23 +32,56 @@ router.post('/imap-login', async (req, res) => {
         host: imapServer,
         port: parseInt(port, 10),
         tls: true,
-        tlsOptions: { rejectUnauthorized: false }
+        tlsOptions: { 
+            rejectUnauthorized: false,
+            enableTrace: true,
+            secureProtocol: 'TLSv1_2_method'
+        },
+        connTimeout: 10000, // Connection timeout in ms
+        authTimeout: 5000,  // Auth timeout in ms
+        debug: (info) => console.log('[IMAP Debug]:', info)
     });
 
-    imap.once('ready', function() {
-        // Sessie opslaan
-        req.session.isAuthenticated = true;
-        req.session.imap = { email, password, imapServer, port };
-        req.session.method = 'imap';
-        imap.end();
-        res.json({ success: true });
-    });
+    let connectionAttempts = 0;
+    const maxAttempts = 3;
 
-    imap.once('error', function(err) {
-        res.status(401).json({ error: 'IMAP inloggen mislukt: ' + err.message });
-    });
+    function attemptConnection() {
+        connectionAttempts++;
+        
+        imap.once('ready', function() {
+            console.log('[IMAP] Connection ready');
+            req.session.isAuthenticated = true;
+            req.session.imap = { email, password, imapServer, port };
+            req.session.method = 'imap';
+            imap.end();
+            res.json({ success: true });
+        });
 
-    imap.connect();
+        imap.once('error', function(err) {
+            console.error('[IMAP] Error:', err);
+            if (connectionAttempts < maxAttempts) {
+                console.log(`[IMAP] Retrying connection (${connectionAttempts}/${maxAttempts})`);
+                setTimeout(attemptConnection, 2000); // Wait 2s before retry
+            } else {
+                res.status(401).json({ 
+                    error: `IMAP inloggen mislukt: ${err.message}. Controleer je inloggegevens en probeer het opnieuw.` 
+                });
+            }
+        });
+
+        imap.once('end', function() {
+            console.log('[IMAP] Connection ended');
+        });
+
+        try {
+            imap.connect();
+        } catch (err) {
+            console.error('[IMAP] Connection error:', err);
+            res.status(401).json({ error: 'Verbinding maken mislukt' });
+        }
+    }
+
+    attemptConnection();
 });
 
 router.get('/acquireToken', authProvider.acquireToken({
