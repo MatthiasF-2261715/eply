@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Mail, Settings, BarChart3, Clock, Users, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -14,13 +14,20 @@ export default function Dashboard() {
   const [emails, setEmails] = useState<any[]>([]);
   const [emailsLoading, setEmailsLoading] = useState(true);
   const [emailsError, setEmailsError] = useState<string | null>(null);
+  const [showReplyPopup, setShowReplyPopup] = useState(false);
+  const [currentReply, setCurrentReply] = useState('');
+  const [previousEmailCount, setPreviousEmailCount] = useState(0);
+  const [lastProcessedEmailId, setLastProcessedEmailId] = useState<string | null>(null);
+  const [lastCheckTime, setLastCheckTime] = useState<number>(Date.now());
+  const isInitialLoad = useRef(true);
+  const [processedEmailIds, setProcessedEmailIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetch('http://localhost:4000/users/profile', {
       credentials: 'include',
     })
       .then(async res => {
-        if (!res.ok  || res.redirected) {
+        if (!res.ok || res.redirected) {
           router.replace('/');
         } else {
           const data = await res.json();
@@ -34,43 +41,12 @@ export default function Dashboard() {
       });
   }, [router]);
 
-  useEffect(() => {
-    let intervalId: NodeJS.Timeout;
+  const handleGenerateReply = async (emailToReply = null) => {
+    const targetEmail = emailToReply || (emails.length ? emails[0] : null);
+    if (!targetEmail) return;
 
-    const fetchEmails = () => {
-      setEmailsLoading(true);
-      fetch('http://localhost:4000/users/mails', {
-        credentials: 'include',
-      })
-        .then(async res => {
-          if (!res.ok || res.redirected) {
-            setEmailsError('Niet ingelogd of sessie verlopen.');
-            setEmails([]);
-          } else {
-            const data = await res.json();
-            setEmails(Array.isArray(data) ? data : data.mails || []);
-          }
-          setEmailsLoading(false);
-        })
-        .catch(() => {
-          setEmailsError('Fout bij ophalen van e-mails.');
-          setEmails([]);
-          setEmailsLoading(false);
-        });
-    };
-
-    fetchEmails(); // initial fetch
-    intervalId = setInterval(fetchEmails, 60000); // elke 10 seconden
-
-    return () => clearInterval(intervalId);
-  }, []);
-
-  const handleGenerateReply = async () => {
-    if (!emails.length) return;
-    const lastEmail = emails[0];
-    // Pas deze velden aan afhankelijk van je e-mailstructuur
-    const emailAddress = lastEmail.from?.address || lastEmail.from || '';
-    const content = lastEmail.snippet || lastEmail.body || lastEmail.subject || '';
+    const emailAddress = targetEmail.from?.address || targetEmail.from || '';
+    const content = targetEmail.snippet || targetEmail.body || targetEmail.subject || '';
 
     if (!emailAddress || !content) {
       console.log('Geen geldig e-mailadres of content gevonden.');
@@ -88,11 +64,88 @@ export default function Dashboard() {
         }),
       });
       const data = await res.json();
-      console.log('AI reply:', data.response || data.error);
-      // Je kunt hier eventueel een state zetten om het antwoord te tonen in de UI
+      setCurrentReply(data.response || data.error);
+      setShowReplyPopup(true);
     } catch (err) {
-      console.error('Fout bij AI reply ophalen:', err);
+      setCurrentReply('Fout bij AI reply ophalen: ' + err);
+      setShowReplyPopup(true);
     }
+  };
+
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
+    const fetchEmails = async () => {
+      setEmailsLoading(true);
+      try {
+        const res = await fetch('http://localhost:4000/users/mails', {
+          credentials: 'include',
+        });
+
+        if (!res.ok || res.redirected) {
+          setEmailsError('Niet ingelogd of sessie verlopen.');
+          setEmails([]);
+        } else {
+          const data = await res.json();
+          const newEmails = Array.isArray(data) ? data : data.mails || [];
+          setEmails(newEmails);
+
+          if (newEmails.length > 0) {
+            const latestEmail = newEmails[0];
+            const emailTime = new Date(latestEmail.date).getTime();
+            
+            // Only generate reply if email is newer than last check AND not processed before
+            if (!isInitialLoad.current && 
+                emailTime > lastCheckTime && 
+                !processedEmailIds.has(latestEmail.id)) {
+              console.log('Nieuwe email gevonden, genereer antwoord...');
+              await handleGenerateReply(latestEmail);
+              // Add email ID to processed set
+              setProcessedEmailIds(prev => new Set(prev).add(latestEmail.id));
+            }
+            
+            if (isInitialLoad.current) {
+              isInitialLoad.current = false;
+            }
+            
+            setLastCheckTime(Date.now());
+          }
+        }
+      } catch (error) {
+        setEmailsError('Fout bij ophalen van e-mails.');
+        setEmails([]);
+      } finally {
+        setEmailsLoading(false);
+      }
+    };
+
+    fetchEmails();
+    intervalId = setInterval(fetchEmails, 60000);
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [processedEmailIds]);
+
+  const ReplyPopup = () => {
+    if (!showReplyPopup) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white p-6 rounded-lg shadow-xl max-w-2xl w-full m-4">
+          <h3 className="text-lg font-bold mb-4">AI Gegenereerd Antwoord</h3>
+          <div className="bg-gray-50 p-4 rounded mb-4 whitespace-pre-wrap">
+            {currentReply}
+          </div>
+          <Button 
+            onClick={() => setShowReplyPopup(false)}
+            className="w-full"
+          >
+            Sluiten
+          </Button>
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -209,7 +262,7 @@ export default function Dashboard() {
                 <Button
                   className="mb-4"
                   variant="outline"
-                  onClick={handleGenerateReply}
+                  onClick={() => handleGenerateReply()}
                 >
                   Genereer AI Antwoord op Laatste E-mail
                 </Button>
@@ -310,6 +363,7 @@ export default function Dashboard() {
           </motion.div>
         </div>
       </div>
+      <ReplyPopup />
     </div>
   );
 }
