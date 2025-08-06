@@ -301,25 +301,105 @@ async function getSentEmails(method, session) {
     return [];
 }
   
-  // Modify the AI reply endpoint
-  router.post('/ai/reply', isAuthenticated, async function (req, res) {
-      let { email, content } = req.body;
-      if (!email || !content) {
-          return res.status(400).json({ error: 'Email en content zijn verplicht.' });
-      }
-      email = extractEmail(email);
-      try {
-          const sentEmails = await getSentEmails(req.session.method, req.session);
-          const assistantObj = await getAssistantByEmail(email);
-          const assistantId = assistantObj.assistant_id || assistantObj.id;
-          
-          const currentEmail = { from: email, content };
-          const aiResponse = await useAssistant(assistantId, currentEmail, sentEmails);
-          
-          res.json({ response: aiResponse });
-      } catch (err) {
-          res.status(500).json({ error: err.message || 'AI response error' });
-      }
-  });
+async function createImapDraft(session, content, originalMail) {
+    return new Promise((resolve, reject) => {
+        const { email, password, imapServer, port } = session.imap;
+        
+        const imap = new Imap({
+            user: email,
+            password: password,
+            host: imapServer,
+            port: parseInt(port, 10),
+            tls: true,
+            tlsOptions: { rejectUnauthorized: false }
+        });
+
+        const draftMessage = [
+            'From: <' + email + '>',
+            'To: <' + originalMail.from + '>',
+            'Subject: Re: ' + (originalMail.subject || '').replace(/[\r\n]/g, ''),
+            'Message-ID: <' + Date.now() + Math.random().toString().substr(2) + '@' + imapServer + '>',
+            'Date: ' + new Date().toUTCString(),
+            'Content-Type: text/plain; charset=utf-8',
+            'Content-Transfer-Encoding: 7bit',
+            'MIME-Version: 1.0',
+            '',
+            content,
+            ''  
+        ].join('\r\n');
+
+        imap.once('ready', function() {
+            console.log('IMAP connection ready');
+            const draftFolder = 'Drafts';
+
+            imap.openBox(draftFolder, false, (err) => {
+                if (err) {
+                    console.log('Error opening folder:', err);
+                    imap.end();
+                    reject(err);
+                    return;
+                }
+
+                console.log('Successfully opened folder');
+                imap.append(draftMessage, {
+                    mailbox: draftFolder,
+                    flags: ['\\Draft']
+                }, (err) => {
+                    if (err) {
+                        console.log('Error creating draft:', err);
+                        imap.end();
+                        reject(err);
+                        return;
+                    }
+                    
+                    // Simple delay to allow server to process
+                    setTimeout(() => {
+                        imap.closeBox((err) => {
+                            if (err) console.log('Error closing box:', err);
+                            imap.end();
+                            resolve();
+                        });
+                    }, 2000);
+                });
+            });
+        });
+
+        imap.once('error', (err) => {
+            console.log('IMAP connection error:', err);
+            reject(err);
+        });
+
+        imap.connect();
+    });
+}
+
+// Modify the AI reply endpoint
+router.post('/ai/reply', isAuthenticated, async function (req, res) {
+    let { email, content, originalMail } = req.body;
+    console.log('AI reply request:', { email, content, originalMail });
+    if (!email || !content) {
+        return res.status(400).json({ error: 'Email en content zijn verplicht.' });
+    }
+    email = extractEmail(email);
+    console.log('Extracted email:', email);
+    try {
+        const sentEmails = await getSentEmails(req.session.method, req.session);
+        const assistantObj = await getAssistantByEmail(email);
+        const assistantId = assistantObj.assistant_id || assistantObj.id;
+        
+        const currentEmail = { from: email, content };
+        const aiResponse = await useAssistant(assistantId, currentEmail, sentEmails);
+        
+        console.log('succes tot hier');
+        // Create draft if originalMail is provided
+        if (originalMail && req.session.method === 'imap') {
+            await createImapDraft(req.session, aiResponse, originalMail);
+        }
+        
+        res.json({ response: aiResponse });
+    } catch (err) {
+        res.status(500).json({ error: err.message || 'AI response error' });
+    }
+});
 
 module.exports = router;

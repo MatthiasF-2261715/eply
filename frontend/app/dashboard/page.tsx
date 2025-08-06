@@ -47,6 +47,8 @@ export default function Dashboard() {
 
     const emailAddress = targetEmail.from?.address || targetEmail.from || '';
     const content = targetEmail.snippet || targetEmail.body || targetEmail.subject || '';
+    const originalFrom = targetEmail.from || '';
+    const originalSubject = targetEmail.subject || '';
 
     if (!emailAddress || !content) {
       console.log('Geen geldig e-mailadres of content gevonden.');
@@ -54,20 +56,33 @@ export default function Dashboard() {
     }
 
     try {
-      const res = await fetch('http://localhost:4000/users/ai/reply', {
+      const response = await fetch('http://localhost:4000/users/ai/reply', { 
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json'
+        },
         credentials: 'include',
         body: JSON.stringify({
           email: emailAddress,
           content: content,
-        }),
+          originalMail: {
+            from: originalFrom,
+            subject: originalSubject
+          }
+        })
       });
-      const data = await res.json();
-      setCurrentReply(data.response || data.error);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Server error');
+      }
+
+      const data = await response.json();
+      setCurrentReply(data.response || 'Geen antwoord ontvangen');
       setShowReplyPopup(true);
     } catch (err) {
-      setCurrentReply('Fout bij AI reply ophalen: ' + err);
+      console.error('AI Reply Error:', err);
+      setCurrentReply(`Fout bij AI reply ophalen: ${err}`);
       setShowReplyPopup(true);
     }
   };
