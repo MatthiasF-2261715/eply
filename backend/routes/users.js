@@ -109,7 +109,7 @@ router.get('/mails', isAuthenticated, async function (req, res, next) {
             if (!req.session.accessToken) {
                 return res.status(401).json({ error: 'No access token in session' });
             }
-            const mailsEndpoint = 'https://graph.microsoft.com/v1.0/me/messages?$top=10&$orderby=receivedDateTime desc';
+            const mailsEndpoint = 'https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=10&$orderby=receivedDateTime desc';
             const mailsResponse = await fetch(mailsEndpoint, req.session.accessToken);
             const mails = (mailsResponse.value || []).map(mail => transformMail(mail, 'outlook'));
             res.json({ mails });
