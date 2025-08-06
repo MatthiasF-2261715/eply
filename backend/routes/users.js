@@ -4,6 +4,8 @@ var router = express.Router();
 var fetch = require('../fetch');
 const Imap = require('imap');
 var { GRAPH_ME_ENDPOINT } = require('../authConfig');
+const { Client } = require('@microsoft/microsoft-graph-client');
+const authProvider = require('../auth/AuthProvider');
 
 const { getAssistantByEmail } = require('../database');
 const { useAssistant } = require('../assistant');
@@ -373,7 +375,44 @@ async function createImapDraft(session, content, originalMail) {
     });
 }
 
-// Modify the AI reply endpoint
+async function createOutlookDraft(session, content, originalMail) {
+    if (!session.accessToken) {
+        throw new Error('No access token available');
+    }
+
+    console.log('Creating Outlook draft with token:', session.accessToken); // Debug logging
+
+    const client = Client.init({
+        authProvider: (done) => {
+            done(null, session.accessToken);
+        }
+    });
+
+    const message = {
+        subject: `Re: ${originalMail.subject || ''}`,
+        importance: 'Normal',
+        body: {
+            contentType: 'Text', 
+            content: content
+        },
+        toRecipients: [{
+            emailAddress: {
+                address: originalMail.from
+            }
+        }]
+    };
+
+    try {
+        const response = await client.api('/me/messages')
+            .post(message);
+        console.log('Draft created successfully:', response); // Debug logging
+        return response;
+    } catch (error) {
+        console.error('Full error details:', error); // Detailed error logging
+        throw error;
+    }
+}
+
 router.post('/ai/reply', isAuthenticated, async function (req, res) {
     let { email, content, originalMail } = req.body;
     console.log('AI reply request:', { email, content, originalMail });
@@ -390,14 +429,22 @@ router.post('/ai/reply', isAuthenticated, async function (req, res) {
         const currentEmail = { from: email, content };
         const aiResponse = await useAssistant(assistantId, currentEmail, sentEmails);
         
-        console.log('succes tot hier');
-        // Create draft if originalMail is provided
-        if (originalMail && req.session.method === 'imap') {
-            await createImapDraft(req.session, aiResponse, originalMail);
+        console.log('AI response generated successfully');
+        
+        if (originalMail) {
+            console.log('Creating draft using method:', req.session.method);
+            if (req.session.method === 'imap') {
+                await createImapDraft(req.session, aiResponse, originalMail);
+                console.log('IMAP draft created successfully');
+            } else if (req.session.method === 'outlook') {
+                await createOutlookDraft(req.session, aiResponse, originalMail);
+                console.log('Outlook draft created successfully');
+            }
         }
         
         res.json({ response: aiResponse });
     } catch (err) {
+        console.error('Error in /ai/reply:', err);
         res.status(500).json({ error: err.message || 'AI response error' });
     }
 });

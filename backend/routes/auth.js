@@ -13,7 +13,7 @@ const router = express.Router();
 
 router.get('/outlook-login', (req, res, next) => {
     authProvider.login({
-        scopes: ["openid", "profile", "User.Read", "Mail.Read"],
+        scopes: ["openid", "profile", "User.Read", "Mail.Read", "Mail.ReadWrite"],
         redirectUri: REDIRECT_URI,
         successRedirect: 'http://localhost:4000/auth/acquireToken'
     })(req, res, next);
