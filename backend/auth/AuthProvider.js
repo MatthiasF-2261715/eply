@@ -1,7 +1,7 @@
 const msal = require('@azure/msal-node');
 const axios = require('axios');
 
-const { msalConfig } = require('../authConfig');
+const { msalConfig } = require('./authConfig');
 
 class AuthProvider {
     msalConfig;

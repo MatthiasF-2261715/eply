@@ -7,7 +7,7 @@ var express = require('express');
 
 const authProvider = require('../auth/AuthProvider');
 const Imap = require('imap');
-const { REDIRECT_URI, POST_LOGOUT_REDIRECT_URI } = require('../authConfig');
+const { REDIRECT_URI, POST_LOGOUT_REDIRECT_URI } = require('../auth/authConfig');
 
 const router = express.Router();
 
@@ -15,7 +15,7 @@ router.get('/outlook-login', (req, res, next) => {
     authProvider.login({
         scopes: ["openid", "profile", "User.Read", "Mail.Read", "Mail.ReadWrite"],
         redirectUri: REDIRECT_URI,
-        successRedirect: 'http://localhost:4000/auth/acquireToken'
+        successRedirect: 'http://localhost:4000/auth/acquireOutlookToken'
     })(req, res, next);
 });
 
@@ -84,7 +84,7 @@ router.post('/imap-login', async (req, res) => {
     attemptConnection();
 });
 
-router.get('/acquireToken', authProvider.acquireToken({
+router.get('/acquireOutlookToken', authProvider.acquireToken({
     scopes: ["openid", "profile", "User.Read", "Mail.Read"],
     redirectUri: REDIRECT_URI,
     successRedirect: 'http://localhost:3000/dashboard'
