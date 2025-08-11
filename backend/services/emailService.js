@@ -1,14 +1,24 @@
-const { getOutlookEmails } = require('./outlookService');
-const { getImapEmails } = require('./imapService');
+const { getOutlookSentEmails, getOutlookInboxEmails } = require('./outlookService');
+const { getImapSentEmails, getImapInboxEmails } = require('./imapService');
 
 async function getSentEmails(method, session) {
     console.log('Fetching sent emails for method:', method);
     if (method === 'outlook') {
-        return getOutlookEmails(session);
+        return getOutlookSentEmails(session);
     } else if (method === 'imap') {
-        return getImapEmails(session.imap);
+        return getImapSentEmails(session.imap);
     }
     return [];
 }
 
-module.exports = { getSentEmails };
+async function getInboxEmails(method, session) {
+    console.log('Fetching inbox emails for method:', method);
+    if (method === 'outlook') {
+        return getOutlookInboxEmails(session);
+    } else if (method === 'imap') {
+        return getImapInboxEmails(session.imap);
+    }
+    return [];
+}
+
+module.exports = { getSentEmails, getInboxEmails };

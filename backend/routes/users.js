@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { isAuthenticated } = require('../middleware/auth');
-const { getSentEmails } = require('../services/emailService');
+const { getInboxEmails, getSentEmails } = require('../services/emailService');
 const { createImapDraft, createOutlookDraft } = require('../services/draftService');
 const { getAssistantByEmail } = require('../database');
 const { useAssistant } = require('../assistant');
@@ -48,7 +48,7 @@ router.get('/mails', isAuthenticated, async function(req, res, next) {
     }
 
     try {
-        const mails = await getSentEmails(req.session.method, req.session);
+        const mails = await getInboxEmails(req.session.method, req.session);
         res.json({ mails });
     } catch (error) {
         res.status(500).json({ error: error.message });
