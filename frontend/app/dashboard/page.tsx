@@ -274,13 +274,6 @@ export default function Dashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button
-                  className="mb-4"
-                  variant="outline"
-                  onClick={() => handleGenerateReply()}
-                >
-                  Genereer AI Antwoord op Laatste E-mail
-                </Button>
                 <div className="space-y-4 relative">
                   {emailsError ? (
                     <div className="text-red-500">{emailsError}</div>
@@ -302,11 +295,20 @@ export default function Dashboard() {
                             {to && <p className="text-xs text-gray-500">Naar: {to}</p>}
                             {email.snippet && <p className="text-xs text-gray-400 mt-1">{email.snippet}</p>}
                           </div>
-                          <div className="text-right">
+                          <div className="flex flex-col items-end gap-2">
                             <p className="text-sm text-gray-500">{date}</p>
-                            <Button size="sm" variant="ghost" className="mt-1">
-                              <ArrowRight className="w-4 h-4" />
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => handleGenerateReply(email)}
+                              >
+                                AI Reply
+                              </Button>
+                              <Button size="sm" variant="ghost">
+                                <ArrowRight className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       );
