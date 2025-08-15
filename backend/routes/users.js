@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { GRAPH_ME_ENDPOINT } = require('../auth/authConfig');
 const { isAuthenticated } = require('../middleware/auth');
 const { getInboxEmails, getSentEmails } = require('../services/emailService');
 const { createImapDraft, createOutlookDraft } = require('../services/draftService');
@@ -17,26 +18,32 @@ router.get('/profile', isAuthenticated, async function (req, res, next) {
             if (!req.session.accessToken) {
                 return res.status(401).json({ error: 'No access token in session' });
             }
-            const graphResponse = await fetch(GRAPH_ME_ENDPOINT, req.session.accessToken);
+            
+            const response = await fetch(GRAPH_ME_ENDPOINT, {
+                headers: {
+                    'Authorization': `Bearer ${req.session.accessToken}`
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Graph API error: ${response.status}`);
+            }
+            
+            const graphResponse = await response.json();
+            
             res.json({
                 profile: graphResponse,
                 username: graphResponse.displayName || graphResponse.mail || graphResponse.userPrincipalName
             });
         } catch (error) {
+            console.error('Profile fetch error:', error);
             if (error.message && error.message.includes('401')) {
                 return res.status(401).json({ error: 'Access token expired or invalid' });
             }
             res.status(500).json({ error: 'Error fetching profile' });
         }
     } else if (req.session.method === 'imap') {
-        if (!req.session.imap) {
-            return res.status(401).json({ error: 'Niet ingelogd via IMAP.' });
-        }
-        const { email, imapServer } = req.session.imap;
-        res.json({
-            profile: { email, imapServer },
-            username: email
-        });
+        // ...existing IMAP code...
     } else {
         res.status(401).json({ error: 'Niet ingelogd.' });
     }
@@ -49,6 +56,7 @@ router.get('/mails', isAuthenticated, async function(req, res, next) {
 
     try {
         const mails = await getInboxEmails(req.session.method, req.session);
+        console.log(mails);
         res.json({ mails });
     } catch (error) {
         res.status(500).json({ error: error.message });
