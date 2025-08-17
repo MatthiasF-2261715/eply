@@ -43,7 +43,14 @@ router.get('/profile', isAuthenticated, async function (req, res, next) {
             res.status(500).json({ error: 'Error fetching profile' });
         }
     } else if (req.session.method === 'imap') {
-        // ...existing IMAP code...
+        if (!req.session.imap) {
+            return res.status(401).json({ error: 'Niet ingelogd via IMAP.' });
+        }
+        const { email, imapServer } = req.session.imap;
+        res.json({
+            profile: { email, imapServer },
+            username: email
+        });
     } else {
         res.status(401).json({ error: 'Niet ingelogd.' });
     }
@@ -56,7 +63,6 @@ router.get('/mails', isAuthenticated, async function(req, res, next) {
 
     try {
         const mails = await getInboxEmails(req.session.method, req.session);
-        console.log(mails);
         res.json({ mails });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -64,19 +70,19 @@ router.get('/mails', isAuthenticated, async function(req, res, next) {
 });
 
 router.post('/ai/reply', isAuthenticated, async function (req, res) {
-    let { email, content, originalMail } = req.body;
+    let { email, title, content, originalMail } = req.body;
     console.log('AI reply request:', { email, content, originalMail });
     if (!email || !content) {
         return res.status(400).json({ error: 'Email en content zijn verplicht.' });
     }
-    email = extractEmail(email);
-    console.log('Extracted email:', email);
+    email = extractEmail(content);
+    console.log('Extracted email:', content);
     try {
         const sentEmails = await getSentEmails(req.session.method, req.session);
         const assistantObj = await getAssistantByEmail(email);
         const assistantId = assistantObj.assistant_id || assistantObj.id;
         
-        const currentEmail = { from: email, content };
+        const currentEmail = { from: email, title };
         const aiResponse = await useAssistant(assistantId, currentEmail, sentEmails);
         
         console.log('AI response generated successfully');

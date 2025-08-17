@@ -28,7 +28,9 @@ app.use(session({
     cookie: {
         httpOnly: true,
         secure: false, // zet op true in productie
-    }
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      },
+    rolling: true // Reset expiration on activity
 }));
 
 app.use(logger('dev'));

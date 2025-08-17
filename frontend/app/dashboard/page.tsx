@@ -45,12 +45,15 @@ export default function Dashboard() {
     const targetEmail = emailToReply || (emails.length ? emails[0] : null);
     if (!targetEmail) return;
 
+    console.log('Geselecteerde e-mail voor antwoord:', targetEmail);
+
     const emailAddress = targetEmail.from?.address || targetEmail.from || '';
-    const content = targetEmail.snippet || targetEmail.body || targetEmail.subject || '';
+    const title = targetEmail.snippet || targetEmail.body || targetEmail.subject || '';
+    const content = targetEmail.content || '';
     const originalFrom = targetEmail.from || '';
     const originalSubject = targetEmail.subject || '';
 
-    if (!emailAddress || !content) {
+    if (!emailAddress || !title || !content) {
       console.log('Geen geldig e-mailadres of content gevonden.');
       return;
     }
@@ -64,6 +67,7 @@ export default function Dashboard() {
         credentials: 'include',
         body: JSON.stringify({
           email: emailAddress,
+          titel: title,
           content: content,
           originalMail: {
             from: originalFrom,
