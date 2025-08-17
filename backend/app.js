@@ -16,6 +16,8 @@ const app = express();
 
 const { Pool } = require('pg');
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 app.use(cors({
   origin: 'http://localhost:3000',
   credentials: true
@@ -27,7 +29,7 @@ app.use(session({
     saveUninitialized: false,
     cookie: {
         httpOnly: true,
-        secure: false, // zet op true in productie
+        secure: isProduction, // zet op true in productie
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
       },
     rolling: true // Reset expiration on activity
