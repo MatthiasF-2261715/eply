@@ -12,6 +12,8 @@ export default function ImapLoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const BACKEND_URL = process.env.BACKEND_URL;
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -26,7 +28,7 @@ export default function ImapLoginPage() {
       return;
     }
     try {
-      const res = await fetch('http://localhost:4000/auth/imap-login', {
+      const res = await fetch(`${BACKEND_URL}/auth/imap-login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

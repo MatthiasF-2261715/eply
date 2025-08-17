@@ -3,6 +3,8 @@
 import Link from 'next/link';
 
 export default function LoginPage() {
+  const BACKEND_URL = process.env.BACKEND_URL;
+  
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-200">
       <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-md">
@@ -10,7 +12,7 @@ export default function LoginPage() {
         <div className="flex flex-col gap-4">
           <button
             type="button"
-            onClick={() => window.location.href = 'http://localhost:4000/auth/outlook-login'}
+            onClick={() => window.location.href = `${BACKEND_URL}/auth/outlook-login`}
             className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition"
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">

@@ -22,8 +22,10 @@ export default function Dashboard() {
   const isInitialLoad = useRef(true);
   const [processedEmailIds, setProcessedEmailIds] = useState<Set<string>>(new Set());
 
+  const BACKEND_URL = process.env.BACKEND_URL;
+
   useEffect(() => {
-    fetch('http://localhost:4000/users/profile', {
+    fetch(`${BACKEND_URL}/users/profile`, {
       credentials: 'include',
     })
       .then(async res => {
@@ -59,7 +61,7 @@ export default function Dashboard() {
     }
 
     try {
-      const response = await fetch('http://localhost:4000/users/ai/reply', { 
+      const response = await fetch(`${BACKEND_URL}/users/ai/reply`, { 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -97,7 +99,7 @@ export default function Dashboard() {
     const fetchEmails = async () => {
       setEmailsLoading(true);
       try {
-        const res = await fetch('http://localhost:4000/users/mails', {
+        const res = await fetch(`${BACKEND_URL}/users/mails`, {
           credentials: 'include',
         });
 
@@ -197,7 +199,7 @@ export default function Dashboard() {
             <Button
               variant="outline"
               className="hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors"
-              onClick={() => window.location.href = 'http://localhost:4000/auth/signout'}
+              onClick={() => window.location.href = `${BACKEND_URL}/auth/signout`}
             >
               Uitloggen
             </Button>
