@@ -18,8 +18,13 @@ const { Pool } = require('pg');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+// Update CORS to allow Railway domain and localhost
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: [
+    'http://localhost:3000',
+    'https://eply.vercel.app', 
+    process.env.FRONTEND_URL
+  ].filter(Boolean),
   credentials: true
 }));
 
@@ -29,10 +34,11 @@ app.use(session({
     saveUninitialized: false,
     cookie: {
         httpOnly: true,
-        secure: isProduction, // zet op true in productie
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        secure: isProduction,
+        maxAge: 24 * 60 * 60 * 1000,
+        sameSite: isProduction ? 'none' : 'lax' // Important for Railway cross-origin requests
       },
-    rolling: true // Reset expiration on activity
+    rolling: true
 }));
 
 app.use(logger('dev'));
@@ -60,20 +66,21 @@ app.use(function (err, req, res, next) {
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: {
-      rejectUnauthorized: false, // nodig voor Railway
-    },
+    ssl: isProduction ? {
+      rejectUnauthorized: false
+    } : false, // Only use SSL in production
   });
   
   pool.connect()
     .then(client => {
       client.release();
-      app.listen(process.env.PORT, () => {
-        console.log(`Server running on http://localhost:${process.env.PORT}`);
+      // Listen on all interfaces for Railway
+      const port = process.env.PORT || 4000;
+      app.listen(port, '0.0.0.0', () => {
+        console.log(`Server running on port ${port}`);
       });
     })
     .catch(err => {
       console.error('Database connection error:', err.stack);
       process.exit(1);
     });
-  
