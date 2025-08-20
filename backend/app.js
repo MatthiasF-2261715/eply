@@ -35,7 +35,8 @@ app.use(session({
         httpOnly: true,
         secure: isProduction,
         maxAge: 24 * 60 * 60 * 1000,
-        sameSite: isProduction ? 'none' : 'lax' // Important for cross-site cookies
+        sameSite: isProduction ? 'none' : 'lax', // Important for cross-site cookies
+        domain: isProduction ? '.railway.app' : undefined
       },
     name: 'eply.session',
     rolling: true
