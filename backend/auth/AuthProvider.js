@@ -125,37 +125,27 @@ class AuthProvider {
             if (!req.body || !req.body.state) {
                 return next(new Error('Error: response not found'));
             }
-    
-            // Check if session data exists
-            if (!req.session.authCodeRequest) {
-                return next(new Error('Session expired: authCodeRequest not found'));
-            }
-    
-            if (!req.session.pkceCodes || !req.session.pkceCodes.verifier) {
-                return next(new Error('Session expired: PKCE codes not found'));
-            }
-    
+
             const authCodeRequest = {
                 ...req.session.authCodeRequest,
                 code: req.body.code,
                 codeVerifier: req.session.pkceCodes.verifier,
             };
-    
+
             try {
                 const msalInstance = this.getMsalInstance(this.msalConfig);
-    
+
                 if (req.session.tokenCache) {
                     msalInstance.getTokenCache().deserialize(req.session.tokenCache);
                 }
-    
+
                 const tokenResponse = await msalInstance.acquireTokenByCode(authCodeRequest, req.body);
-    
+
                 req.session.tokenCache = msalInstance.getTokenCache().serialize();
                 req.session.idToken = tokenResponse.idToken;
                 req.session.account = tokenResponse.account;
                 req.session.isAuthenticated = true;
-                req.session.accessToken = tokenResponse.accessToken;
-    
+
                 const state = JSON.parse(this.cryptoProvider.base64Decode(req.body.state));
                 res.redirect(state.successRedirect);
             } catch (error) {
