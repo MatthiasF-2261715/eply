@@ -35,8 +35,9 @@ app.use(session({
         httpOnly: true,
         secure: isProduction,
         maxAge: 24 * 60 * 60 * 1000,
-        sameSite: isProduction ? 'none' : 'lax' // Important for Railway cross-origin requests
+        sameSite: isProduction ? 'none' : 'lax' // Important for cross-site cookies
       },
+    name: 'eply.session',
     rolling: true
 }));
 
