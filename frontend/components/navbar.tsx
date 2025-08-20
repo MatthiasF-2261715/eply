@@ -11,13 +11,15 @@ export function Navbar() {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    fetch('http://localhost:4000/users/profile', { credentials: 'include' })
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+    fetch(`${backendUrl}/users/profile`, { credentials: 'include' })
       .then(res => {
-        console.log(res.status);
-        if (res.status === 200) {
-          setIsAuthenticated(true);
-        }
-        setLoading(false);
+      console.log(res.status);
+      if (res.status === 200) {
+        setIsAuthenticated(true);
+      }
+      setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);

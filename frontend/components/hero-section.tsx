@@ -12,7 +12,7 @@ export function HeroSection() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    fetch('http://localhost:4000/users/profile', { credentials: 'include' })
+    fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/profile`, { credentials: 'include' })
       .then(res => {
         console.log(res.status);
         if (res.status === 200) {

@@ -18,7 +18,6 @@ const { Pool } = require('pg');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Update CORS to allow Railway domain and localhost
 app.use(cors({
   origin: [
     'http://localhost:3000',
