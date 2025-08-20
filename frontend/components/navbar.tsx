@@ -11,7 +11,7 @@ export function Navbar() {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    const backendUrl = process.env.BACKEND_URL;
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
     fetch(`${backendUrl}/users/profile`, { credentials: 'include' })
       .then(res => {

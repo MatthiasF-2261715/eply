@@ -22,7 +22,7 @@ export default function Dashboard() {
   const isInitialLoad = useRef(true);
   const [processedEmailIds, setProcessedEmailIds] = useState<Set<string>>(new Set());
 
-  const BACKEND_URL = process.env.BACKEND_URL;
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   useEffect(() => {
     fetch(`${BACKEND_URL}/users/profile`, {
