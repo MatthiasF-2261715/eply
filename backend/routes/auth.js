@@ -80,6 +80,10 @@ router.post('/imap-login', async (req, res) => {
                     console.error('Session save error:', err);
                     return res.status(500).json({ error: 'Session save failed' });
                 }
+
+                console.log('Session saved successfully:', req.sessionID);
+                console.log('Session data after save:', req.session);
+                console.log('Response headers:', res.getHeaders());
                 imap.end();
                 res.json({ success: true });
             });

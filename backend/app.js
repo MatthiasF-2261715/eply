@@ -43,15 +43,15 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    secure: false, // altijd false in development
-    sameSite: 'lax',
+    secure: isProduction,       // moet true zijn in productie
+    sameSite: isProduction ? 'none' : 'lax', // None in prod voor OAuth/IMAP
     maxAge: 24 * 60 * 60 * 1000,
   },
-  store: new (require('connect-pg-simple')(session))({
+  store: isProduction ? new (require('connect-pg-simple')(session))({
     pool,
     tableName: 'user_sessions',
     createTableIfMissing: true
-  }),
+  }) : undefined,
   rolling: true
 }));
 
