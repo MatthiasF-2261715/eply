@@ -7,7 +7,7 @@ const pool = new Pool({
 async function getUserIdByEmail(email) {
   if (!email) throw new Error('Email is required');
   console.log('Fetching user ID for email:', email);
-  const userResult = await pool.query('SELECT id FROM users WHERE email = $1', ['matthias@eply.be']);
+  const userResult = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
   if (userResult.rows.length === 0) {
     throw new Error('User not found');
   }
