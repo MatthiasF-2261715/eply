@@ -96,7 +96,31 @@ router.get('/acquireOutlookToken', authProvider.acquireToken({
     successRedirect: `${FRONTEND_URL}/dashboard`
 }));
 
-router.post('/redirect', authProvider.handleRedirect());
+router.post('/redirect', authProvider.handleRedirect(), (req, res) => {
+    console.log('OAuth redirect - setting session data');
+    console.log('Account data:', req.session.account);
+    
+    // Zet de sessie data na succesvolle OAuth
+    req.session.isAuthenticated = true;
+    req.session.method = 'outlook';
+    
+    // Save the session explicitly
+    req.session.save((err) => {
+        if (err) {
+            console.error('Session save error in OAuth redirect:', err);
+            return res.status(500).json({ error: 'Session save failed' });
+        }
+        console.log('Session saved successfully in OAuth redirect');
+        console.log('Session data after save:', {
+            isAuthenticated: req.session.isAuthenticated,
+            method: req.session.method,
+            sessionID: req.sessionID
+        });
+        
+        // Redirect to frontend dashboard
+        res.redirect(`${process.env.FRONTEND_URL}/dashboard`);
+    });
+});
 
 router.get('/signout', (req, res, next) => {
     if (req.session.method === 'outlook') {
