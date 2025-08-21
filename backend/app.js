@@ -17,6 +17,7 @@ const app = express();
 const { Pool } = require('pg');
 
 const isProduction = process.env.NODE_ENV === 'production';
+console.log(`Running in ${isProduction ? 'production' : 'development'} mode`);
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -27,28 +28,31 @@ const pool = new Pool({
 
 app.use(cors({
   origin: [
-    process.env.FRONTEND_URL
+    process.env.FRONTEND_URL,
+    "http://localhost:3000",
+    "https://eply.vercel.app"
   ].filter(Boolean),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
 }));
 
+app.set('trust proxy', 1);
+
 app.use(session({
   secret: process.env.EXPRESS_SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
-      httpOnly: true,
-      secure: isProduction, // HTTPS required in production
-      maxAge: 24 * 60 * 60 * 1000,
-      sameSite: 'lax' // Change to 'lax' for better OAuth compatibility
+    httpOnly: true,
+    secure: isProduction,       // moet true zijn in productie
+    sameSite: isProduction ? 'none' : 'lax', // None in prod voor OAuth/IMAP
+    maxAge: 24 * 60 * 60 * 1000,
   },
-  // Voeg een persistente store toe voor productie
   store: isProduction ? new (require('connect-pg-simple')(session))({
-      pool: pool, // Je bestaande database pool
-      tableName: 'user_sessions',
-      createTableIfMissing: true
+    pool,
+    tableName: 'user_sessions',
+    createTableIfMissing: true
   }) : undefined,
   rolling: true
 }));

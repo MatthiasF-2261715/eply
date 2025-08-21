@@ -233,67 +233,43 @@ class AuthProvider {
      */
     redirectToAuthCodeUrl(authCodeUrlRequestParams, authCodeRequestParams, msalInstance) {
         return async (req, res, next) => {
+            // Generate PKCE Codes before starting the authorization flow
+            const { verifier, challenge } = await this.cryptoProvider.generatePkceCodes();
+
+            // Set generated PKCE codes and method as session vars
+            req.session.pkceCodes = {
+                challengeMethod: 'S256',
+                verifier: verifier,
+                challenge: challenge,
+            };
+
+            req.session.method = 'outlook';
+
+            /**
+             * By manipulating the request objects below before each request, we can obtain
+             * auth artifacts with desired claims. For more information, visit:
+             * https://azuread.github.io/microsoft-authentication-library-for-js/ref/modules/_azure_msal_node.html#authorizationurlrequest
+             * https://azuread.github.io/microsoft-authentication-library-for-js/ref/modules/_azure_msal_node.html#authorizationcoderequest
+             **/
+            req.session.authCodeUrlRequest = {
+                ...authCodeUrlRequestParams,
+                responseMode: msal.ResponseMode.FORM_POST, // recommended for confidential clients
+                codeChallenge: req.session.pkceCodes.challenge,
+                codeChallengeMethod: req.session.pkceCodes.challengeMethod,
+            };
+
+            req.session.authCodeRequest = {
+                ...authCodeRequestParams,
+                code: '',
+            };
+
             try {
-                // Generate PKCE Codes before starting the authorization flow
-                const { verifier, challenge } = await this.cryptoProvider.generatePkceCodes();
-    
-                // Set generated PKCE codes and method as session vars
-                req.session.pkceCodes = {
-                    challengeMethod: 'S256',
-                    verifier: verifier,
-                    challenge: challenge,
-                };
-    
-                req.session.method = 'outlook';
-    
-                /**
-                 * By manipulating the request objects below before each request, we can obtain
-                 * auth artifacts with desired claims. For more information, visit:
-                 * https://azuread.github.io/microsoft-authentication-library-for-js/ref/modules/_azure_msal_node.html#authorizationurlrequest
-                 * https://azuread.github.io/microsoft-authentication-library-for-js/ref/modules/_azure_msal_node.html#authorizationcoderequest
-                 **/
-                req.session.authCodeUrlRequest = {
-                    ...authCodeUrlRequestParams,
-                    responseMode: msal.ResponseMode.FORM_POST, // recommended for confidential clients
-                    codeChallenge: req.session.pkceCodes.challenge,
-                    codeChallengeMethod: req.session.pkceCodes.challengeMethod,
-                };
-    
-                req.session.authCodeRequest = {
-                    ...authCodeRequestParams,
-                    code: '',
-                };
-    
-                console.log('[AUTH] Saving session data before redirect...');
-                console.log('[AUTH] Session ID:', req.sessionID);
-                console.log('[AUTH] Data to save:', {
-                    hasPkceCodes: !!req.session.pkceCodes,
-                    hasAuthCodeRequest: !!req.session.authCodeRequest,
-                    hasAuthCodeUrlRequest: !!req.session.authCodeUrlRequest
+                const authCodeUrlResponse = await msalInstance.getAuthCodeUrl(req.session.authCodeUrlRequest);
+                req.session.save(err => {
+                    if (err) return next(err);
+                    res.redirect(authCodeUrlResponse);
                 });
-    
-                // Explicitly save session before redirect
-                req.session.save((err) => {
-                    if (err) {
-                        console.error('[AUTH] Session save error:', err);
-                        return next(err);
-                    }
-    
-                    console.log('[AUTH] Session saved successfully, getting auth URL...');
-    
-                    msalInstance.getAuthCodeUrl(req.session.authCodeUrlRequest)
-                        .then(authCodeUrlResponse => {
-                            console.log('[AUTH] Redirecting to Microsoft login...');
-                            res.redirect(authCodeUrlResponse);
-                        })
-                        .catch(error => {
-                            console.error('[AUTH] getAuthCodeUrl error:', error);
-                            next(error);
-                        });
-                });
-    
             } catch (error) {
-                console.error('[AUTH] redirectToAuthCodeUrl error:', error);
                 next(error);
             }
         };
