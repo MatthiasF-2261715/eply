@@ -15,7 +15,7 @@ router.get('/outlook-login', (req, res, next) => {
     authProvider.login({
         scopes: ["openid", "profile", "User.Read", "Mail.Read", "Mail.ReadWrite"],
         redirectUri: REDIRECT_URI,
-        successRedirect: `${BACKEND_URL}/auth/acquireOutlookToken`
+        successRedirect:'/auth/acquireOutlookToken'
     })(req, res, next);
 });
 

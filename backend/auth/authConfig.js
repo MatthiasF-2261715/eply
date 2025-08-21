@@ -3,10 +3,6 @@
  * Licensed under the MIT License.
  */
 
-if (process.env.NODE_ENV !== 'production') {
-    require('dotenv').config();
-  }
-
 /**
  * Configuration object to be passed to MSAL instance on creation.
  * For a full list of MSAL Node configuration parameters, visit:
