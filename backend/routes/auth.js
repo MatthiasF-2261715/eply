@@ -34,12 +34,16 @@ router.post('/imap-login', async (req, res) => {
         tls: true,
         tlsOptions: { 
             rejectUnauthorized: false,
-            enableTrace: true,
-            secureProtocol: 'TLSv1_2_method'
+            servername: imapServer,
+            ciphers: 'HIGH:MEDIUM:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!SRP:!CAMELLIA'
         },
-        connTimeout: 10000, // Connection timeout in ms
-        authTimeout: 5000,  // Auth timeout in ms
-        debug: (info) => console.log('[IMAP Debug]:', info)
+        connTimeout: 15000,
+        authTimeout: 10000, 
+        keepalive: {
+            interval: 10000,
+            idleInterval: 300000,
+            forceNoop: true
+        }
     });
 
     let connectionAttempts = 0;
@@ -48,20 +52,45 @@ router.post('/imap-login', async (req, res) => {
     function attemptConnection() {
         connectionAttempts++;
         
+        const connectionTimeout = setTimeout(() => {
+            console.log('[IMAP] Connection timeout - ending connection');
+            try {
+                imap.end();
+            } catch (e) {
+                // Ignore cleanup errors
+            }
+            if (connectionAttempts < maxAttempts) {
+                console.log(`[IMAP] Timeout - Retrying connection (${connectionAttempts}/${maxAttempts})`);
+                setTimeout(attemptConnection, 3000);
+            } else {
+                res.status(408).json({ 
+                    error: 'Verbinding time-out. Controleer je server instellingen.' 
+                });
+            }
+        }, 20000); // 20 second timeout
+
         imap.once('ready', function() {
             console.log('[IMAP] Connection ready');
+            clearTimeout(connectionTimeout);
             req.session.isAuthenticated = true;
             req.session.imap = { email, password, imapServer, port };
             req.session.method = 'imap';
-            imap.end();
-            res.json({ success: true });
+            req.session.save((err) => {
+                if (err) {
+                    console.error('Session save error:', err);
+                    return res.status(500).json({ error: 'Session save failed' });
+                }
+                imap.end();
+                res.json({ success: true });
+            });
         });
 
         imap.once('error', function(err) {
             console.error('[IMAP] Error:', err);
+            clearTimeout(connectionTimeout);
             if (connectionAttempts < maxAttempts) {
                 console.log(`[IMAP] Retrying connection (${connectionAttempts}/${maxAttempts})`);
-                setTimeout(attemptConnection, 2000); // Wait 2s before retry
+                setTimeout(attemptConnection, 3000); // Increased retry delay
             } else {
                 res.status(401).json({ 
                     error: `IMAP inloggen mislukt: ${err.message}. Controleer je inloggegevens en probeer het opnieuw.` 
@@ -71,12 +100,15 @@ router.post('/imap-login', async (req, res) => {
 
         imap.once('end', function() {
             console.log('[IMAP] Connection ended');
+            clearTimeout(connectionTimeout);
         });
 
         try {
+            console.log('[IMAP] Attempting to connect...');
             imap.connect();
         } catch (err) {
             console.error('[IMAP] Connection error:', err);
+            clearTimeout(connectionTimeout);
             res.status(401).json({ error: 'Verbinding maken mislukt' });
         }
     }
