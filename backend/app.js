@@ -28,9 +28,7 @@ const pool = new Pool({
 
 app.use(cors({
   origin: [
-    process.env.FRONTEND_URL,
-    "http://localhost:3000",
-    "https://eply.vercel.app"
+    process.env.FRONTEND_URL
   ].filter(Boolean),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -56,20 +54,6 @@ app.use(session({
   }) : undefined,
   rolling: true
 }));
-
-app.use((req, res, next) => {
-  console.log(`\n=== ${req.method} ${req.path} ===`);
-  console.log('Session ID:', req.sessionID);
-  console.log('Session data:', {
-    isAuthenticated: req.session.isAuthenticated,
-    method: req.session.method,
-    hasAccount: !!req.session.account,
-    hasAccessToken: !!req.session.accessToken
-  });
-  console.log('Query params:', req.query);
-  console.log('Body:', req.body);
-  next();
-});
 
 app.use(logger('dev'));
 app.use(express.json());
