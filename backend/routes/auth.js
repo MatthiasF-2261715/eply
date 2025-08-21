@@ -53,8 +53,14 @@ router.post('/imap-login', async (req, res) => {
             req.session.isAuthenticated = true;
             req.session.imap = { email, password, imapServer, port };
             req.session.method = 'imap';
-            imap.end();
-            res.json({ success: true });
+            req.session.save((err) => {
+                if (err) {
+                    console.error('Session save error:', err);
+                    return res.status(500).json({ error: 'Session save failed' });
+                }
+                imap.end();
+                res.json({ success: true });
+            });
         });
 
         imap.once('error', function(err) {
