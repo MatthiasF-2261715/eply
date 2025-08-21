@@ -33,6 +33,8 @@ const POST_LOGOUT_REDIRECT_URI = process.env.POST_LOGOUT_REDIRECT_URI;
 const GRAPH_ME_ENDPOINT = process.env.GRAPH_API_ENDPOINT + "/me";
 
 module.exports = {
+    FRONTEND_URL,
+    BACKEND_URL,
     msalConfig,
     REDIRECT_URI,
     POST_LOGOUT_REDIRECT_URI,
