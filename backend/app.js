@@ -57,6 +57,21 @@ app.use(session({
   rolling: true
 }));
 
+// Voeg deze debug middleware toe
+app.use((req, res, next) => {
+  console.log(`\n=== ${req.method} ${req.path} ===`);
+  console.log('Session ID:', req.sessionID);
+  console.log('Session data:', {
+    isAuthenticated: req.session.isAuthenticated,
+    method: req.session.method,
+    hasAccount: !!req.session.account,
+    hasAccessToken: !!req.session.accessToken
+  });
+  console.log('Query params:', req.query);
+  console.log('Body:', req.body);
+  next();
+});
+
 app.use(logger('dev'));
 app.use(express.json());
 app.use(cookieParser());

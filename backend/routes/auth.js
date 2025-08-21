@@ -138,4 +138,32 @@ router.get('/signout', (req, res, next) => {
     }
 });
 
+router.get('/redirect', (req, res) => {
+    console.log('GET /redirect called - OAuth callback');
+    console.log('Query params:', req.query);
+    console.log('Session before:', {
+        isAuthenticated: req.session.isAuthenticated,
+        method: req.session.method,
+        sessionID: req.sessionID
+    });
+    
+    // Check if we have account data from OAuth
+    if (req.session.account) {
+        req.session.isAuthenticated = true;
+        req.session.method = 'outlook';
+        
+        req.session.save((err) => {
+            if (err) {
+                console.error('Session save error in GET redirect:', err);
+                return res.status(500).send('Session save failed');
+            }
+            console.log('Session saved successfully in GET redirect');
+            res.redirect(`${process.env.FRONTEND_URL}/dashboard`);
+        });
+    } else {
+        console.log('No account data found in session');
+        res.redirect(`${process.env.FRONTEND_URL}/login?error=oauth_failed`);
+    }
+});
+
 module.exports = router;
