@@ -1,12 +1,13 @@
 function isAuthenticated(req, res, next) {
-  if (!req.session.isAuthenticated) {
-    // For fetch/XHR, return 401 JSON so the frontend can handle it
-    if (req.xhr || req.headers.accept?.includes('application/json')) {
-      return res.status(401).json({ error: 'Niet ingelogd.' });
+        if (!req.session.isAuthenticated) {
+        return res.redirect('/auth/outlook-login');
     }
-    return res.redirect('/auth/outlook-login');
-  }
-  next();
+    
+    // Add this to ensure session is saved
+    req.session.save((err) => {
+        if (err) console.error('Session save error:', err);
+        next();
+    });
 }
 
 module.exports = { isAuthenticated };

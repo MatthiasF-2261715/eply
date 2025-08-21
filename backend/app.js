@@ -26,19 +26,6 @@ const pool = new Pool({
   } : false, // Only use SSL in production
 });
 
-const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-const backendUrl = process.env.BACKEND_URL || 'http://localhost:4000';
-
-const frontend = new URL(frontendUrl);
-const backend = new URL(backendUrl);
-
-// cross-site if origins differ
-const isCrossSite = frontend.origin !== backend.origin;
-// must be true when SameSite=None
-const mustBeSecure = frontend.protocol === 'https:' || backend.protocol === 'https:';
-
-if (isProduction) app.set('trust proxy', 1); // only behind proxy
-
 app.use(cors({
   origin: [
     process.env.FRONTEND_URL,
@@ -58,8 +45,8 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    secure: mustBeSecure,                 // true when serving over https
-    sameSite: isCrossSite ? 'none' : 'lax', // none for different origins
+    secure: isProduction,       // moet true zijn in productie
+    sameSite: isProduction ? 'none' : 'lax', // None in prod voor OAuth/IMAP
     maxAge: 24 * 60 * 60 * 1000,
   },
   store: isProduction ? new (require('connect-pg-simple')(session))({

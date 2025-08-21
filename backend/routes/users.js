@@ -13,7 +13,9 @@ router.get('/id', isAuthenticated, async (req, res) => {
 });
 
 router.get('/profile', isAuthenticated, async function (req, res, next) {
+    console.log('Fetching profile for session method:', req.session.method);
     if (req.session.method === 'outlook') {
+        console.log('Using Outlook session for profile');
         try {
             if (!req.session.accessToken) {
                 return res.status(401).json({ error: 'No access token in session' });
@@ -43,6 +45,7 @@ router.get('/profile', isAuthenticated, async function (req, res, next) {
             res.status(500).json({ error: 'Error fetching profile' });
         }
     } else if (req.session.method === 'imap') {
+        console.log('Using IMAP session for profile');
         if (!req.session.imap) {
             return res.status(401).json({ error: 'Niet ingelogd via IMAP.' });
         }
