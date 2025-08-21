@@ -57,7 +57,6 @@ app.use(session({
   rolling: true
 }));
 
-// Voeg deze debug middleware toe
 app.use((req, res, next) => {
   console.log(`\n=== ${req.method} ${req.path} ===`);
   console.log('Session ID:', req.sessionID);
