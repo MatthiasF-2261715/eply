@@ -122,33 +122,72 @@ class AuthProvider {
 
     handleRedirect(options = {}) {
         return async (req, res, next) => {
-            if (!req.body || !req.body.state) {
-                return next(new Error('Error: response not found'));
-            }
-
-            const authCodeRequest = {
-                ...req.session.authCodeRequest,
-                code: req.body.code,
-                codeVerifier: req.session.pkceCodes.verifier,
-            };
-
             try {
+                console.log('[AUTH] handleRedirect called');
+                console.log('[AUTH] Session ID:', req.sessionID);
+                console.log('[AUTH] Session data:', {
+                    hasAuthCodeRequest: !!req.session.authCodeRequest,
+                    hasPkceCodes: !!req.session.pkceCodes,
+                    method: req.session.method
+                });
+    
+                if (!req.body || !req.body.state) {
+                    console.error('[AUTH] Error: response not found in request body');
+                    return next(new Error('Error: response not found'));
+                }
+    
+                if (!req.session.authCodeRequest) {
+                    console.error('[AUTH] Error: authCodeRequest not found in session');
+                    return next(new Error('Session expired or invalid. Please try logging in again.'));
+                }
+    
+                if (!req.session.pkceCodes || !req.session.pkceCodes.verifier) {
+                    console.error('[AUTH] Error: PKCE codes not found in session');
+                    return next(new Error('Session expired or invalid. Please try logging in again.'));
+                }
+    
+                const authCodeRequest = {
+                    ...req.session.authCodeRequest,
+                    code: req.body.code,
+                    codeVerifier: req.session.pkceCodes.verifier,
+                };
+    
+                console.log('[AUTH] Attempting token acquisition...');
+    
                 const msalInstance = this.getMsalInstance(this.msalConfig);
-
+    
                 if (req.session.tokenCache) {
                     msalInstance.getTokenCache().deserialize(req.session.tokenCache);
                 }
-
+    
                 const tokenResponse = await msalInstance.acquireTokenByCode(authCodeRequest, req.body);
-
+    
                 req.session.tokenCache = msalInstance.getTokenCache().serialize();
                 req.session.idToken = tokenResponse.idToken;
                 req.session.account = tokenResponse.account;
                 req.session.isAuthenticated = true;
-
+                req.session.method = 'outlook';
+    
+                console.log('[AUTH] Token acquisition successful');
+    
+                // Clear temporary session data
+                delete req.session.authCodeRequest;
+                delete req.session.pkceCodes;
+    
                 const state = JSON.parse(this.cryptoProvider.base64Decode(req.body.state));
-                res.redirect(state.successRedirect);
+                
+                // Save session before redirect
+                req.session.save((err) => {
+                    if (err) {
+                        console.error('[AUTH] Session save error:', err);
+                        return next(err);
+                    }
+                    console.log('[AUTH] Redirecting to:', state.successRedirect);
+                    res.redirect(state.successRedirect);
+                });
+    
             } catch (error) {
+                console.error('[AUTH] handleRedirect error:', error);
                 next(error);
             }
         }
