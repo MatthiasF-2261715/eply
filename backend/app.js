@@ -42,7 +42,7 @@ app.use(session({
       httpOnly: true,
       secure: isProduction, // HTTPS required in production
       maxAge: 24 * 60 * 60 * 1000,
-      sameSite: isProduction ? 'none' : 'lax' // Voor cross-site cookies
+      sameSite: 'lax' // Change to 'lax' for better OAuth compatibility
   },
   // Voeg een persistente store toe voor productie
   store: isProduction ? new (require('connect-pg-simple')(session))({
