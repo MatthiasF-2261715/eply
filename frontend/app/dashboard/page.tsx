@@ -21,6 +21,7 @@ export default function Dashboard() {
   const [lastCheckTime, setLastCheckTime] = useState<number>(Date.now());
   const isInitialLoad = useRef(true);
   const [processedEmailIds, setProcessedEmailIds] = useState<Set<string>>(new Set());
+  const [loadingReplies, setLoadingReplies] = useState<Set<string>>(new Set());
 
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -47,6 +48,10 @@ export default function Dashboard() {
     const targetEmail = emailToReply || (emails.length ? emails[0] : null);
     if (!targetEmail) return;
 
+    const emailId = targetEmail.id || targetEmail.subject;
+
+    setLoadingReplies(prev => new Set(prev).add(emailId));
+
     console.log('Geselecteerde e-mail voor antwoord:', targetEmail);
 
     const emailAddress = targetEmail.from?.address || targetEmail.from || '';
@@ -57,6 +62,11 @@ export default function Dashboard() {
 
     if (!emailAddress || !title || !content) {
       console.log('Geen geldig e-mailadres of content gevonden.');
+      setLoadingReplies(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(emailId);
+        return newSet;
+      });
       return;
     }
 
@@ -90,6 +100,12 @@ export default function Dashboard() {
       console.error('AI Reply Error:', err);
       setCurrentReply(`Fout bij AI reply ophalen: ${err}`);
       setShowReplyPopup(true);
+    } finally {
+      setLoadingReplies(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(emailId);
+        return newSet;
+      });
     }
   };
 
@@ -308,8 +324,9 @@ export default function Dashboard() {
                                 size="sm" 
                                 variant="outline"
                                 onClick={() => handleGenerateReply(email)}
+                                disabled={loadingReplies.has(email.id || email.subject)}
                               >
-                                AI Reply
+                                {loadingReplies.has(email.id || email.subject) ? 'Laden...' : 'AI Reply'}
                               </Button>
                               <Button size="sm" variant="ghost">
                                 <ArrowRight className="w-4 h-4" />
