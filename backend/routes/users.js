@@ -73,8 +73,8 @@ router.get('/mails', isAuthenticated, async function(req, res, next) {
 });
 
 router.post('/ai/reply', isAuthenticated, async function (req, res) {
-    let { email, title, content, originalMail } = req.body;
-    console.log('AI reply request:', { email, content, originalMail });
+    let { email, title, content, originalMailId } = req.body;
+    console.log('AI reply request:', { email, title, content, originalMailId });
     if (!email || !content) {
         return res.status(400).json({ error: 'Email en content zijn verplicht.' });
     }
@@ -90,13 +90,13 @@ router.post('/ai/reply', isAuthenticated, async function (req, res) {
         
         console.log('AI response generated successfully');
         
-        if (originalMail) {
+        if (originalMailId) {
             console.log('Creating draft using method:', req.session.method);
             if (req.session.method === 'imap') {
-                await createImapDraft(req.session, aiResponse, originalMail);
+                await createImapDraft(req.session, aiResponse, originalMailId);
                 console.log('IMAP draft created successfully');
             } else if (req.session.method === 'outlook') {
-                await createOutlookDraft(req.session, aiResponse, originalMail);
+                await createOutlookDraft(req.session, aiResponse, originalMailId);
                 console.log('Outlook draft created successfully');
             }
         }

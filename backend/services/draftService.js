@@ -73,40 +73,41 @@ async function createImapDraft(session, content, originalMail) {
     });
 }
 
-async function createOutlookDraft(session, content, originalMail) {
-    if (!session.accessToken) {
+async function createOutlookDraft(session, ai_reply, mail_id) {
+    if (!session?.accessToken) {
         throw new Error('No access token available');
     }
-
-    console.log('Creating Outlook draft with token:', session.accessToken); // Debug logging
+    if (!mail_id) {
+        throw new Error('mail_id is required to create a reply draft');
+    }
 
     const client = Client.init({
-        authProvider: (done) => {
-            done(null, session.accessToken);
-        }
+        authProvider: (done) => done(null, session.accessToken)
     });
 
-    const message = {
-        subject: `Re: ${originalMail.subject || ''}`,
-        importance: 'Normal',
-        body: {
-            contentType: 'Text', 
-            content: content
-        },
-        toRecipients: [{
-            emailAddress: {
-                address: originalMail.from
-            }
-        }]
-    };
-
     try {
-        const response = await client.api('/me/messages')
-            .post(message);
-        console.log('Draft created successfully:', response); // Debug logging
-        return response;
+        // 1. Maak een echte reply draft (niet reply-all)
+        const draftReply = await client
+            .api(`/me/messages/${mail_id}/createReply`)
+            .post();
+
+        // 2. Combineer AI reply boven de bestaande (gequote) body
+        const originalBody = draftReply?.body?.content || '';
+        const combinedBody = `${ai_reply}\n\n${originalBody}`;
+
+        // 3. Update draft met jouw content
+        const updatedDraft = await client
+            .api(`/me/messages/${draftReply.id}`)
+            .update({
+                body: {
+                    contentType: 'Text', // Pas aan naar 'HTML' indien ai_reply HTML bevat
+                    content: combinedBody
+                }
+            });
+
+        return updatedDraft;
     } catch (error) {
-        console.error('Full error details:', error); // Detailed error logging
+        console.error('Error creating Outlook reply draft:', error);
         throw error;
     }
 }

@@ -34,7 +34,7 @@ export default function Dashboard() {
           router.replace('/');
         } else {
           const data = await res.json();
-          console.log('User profile data:', data['profile']['email']);
+          console.log('User profile data:', data);
           setUsername(data.username);
           setLoading(false);
         }
@@ -46,7 +46,6 @@ export default function Dashboard() {
 
   const handleGenerateReply = async (emailToReply = null) => {
     const targetEmail = emailToReply || (emails.length ? emails[0] : null);
-    console.log('Target email for reply generation:', targetEmail);
     
     if (!targetEmail) return;
 
@@ -59,8 +58,7 @@ export default function Dashboard() {
     const emailAddress = targetEmail.from?.address || targetEmail.from || '';
     const title = targetEmail.snippet || targetEmail.body || targetEmail.subject || '';
     const content = targetEmail.content || '';
-    const originalFrom = targetEmail.from || '';
-    const originalSubject = targetEmail.subject || '';
+    const originalId = targetEmail.id || '';
 
     if (!emailAddress || !title || !content) {
       console.log('Geen geldig e-mailadres of content gevonden.');
@@ -77,10 +75,7 @@ export default function Dashboard() {
         email: emailAddress,
         titel: title,
         content: content,
-        originalMail: {
-          from: originalFrom,
-          subject: originalSubject
-        }
+        originalId: originalId
       });
       
       const response = await fetch(`${BACKEND_URL}/users/ai/reply`, { 
@@ -93,10 +88,7 @@ export default function Dashboard() {
           email: emailAddress,
           titel: title,
           content: content,
-          originalMail: {
-            from: originalFrom,
-            subject: originalSubject
-          }
+          originalId: originalId
         })
       });
 
