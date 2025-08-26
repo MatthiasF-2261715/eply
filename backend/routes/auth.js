@@ -21,7 +21,6 @@ router.get('/outlook-login', (req, res, next) => {
 
 router.post('/imap-login', async (req, res) => {
     const { email, password, imapServer, port } = req.body;
-    console.log(req.body);
     if (!email || !password || !imapServer || !port) {
         return res.status(400).json({ error: 'Vul alle velden in.' });
     }

@@ -5,11 +5,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 async function useAssistant(assistantId, currentEmail, previousEmails = []) {
   try {
-    // Format the context with previous emails and current email
-    console.log(currentEmail);
     const context = formatEmailContext(currentEmail, previousEmails);
-
-    console.log('Formatted context for OpenAI:', context);
     
     const thread = await openai.beta.threads.create();
     const threadId = thread.id;

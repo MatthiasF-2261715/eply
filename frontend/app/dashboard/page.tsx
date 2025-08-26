@@ -46,6 +46,8 @@ export default function Dashboard() {
 
   const handleGenerateReply = async (emailToReply = null) => {
     const targetEmail = emailToReply || (emails.length ? emails[0] : null);
+    console.log('Target email for reply generation:', targetEmail);
+    
     if (!targetEmail) return;
 
     const emailId = targetEmail.id || targetEmail.subject;
@@ -71,6 +73,16 @@ export default function Dashboard() {
     }
 
     try {
+      console.log('Verzoek verzenden naar AI Reply endpoint met payload:', {
+        email: emailAddress,
+        titel: title,
+        content: content,
+        originalMail: {
+          from: originalFrom,
+          subject: originalSubject
+        }
+      });
+      
       const response = await fetch(`${BACKEND_URL}/users/ai/reply`, { 
         method: 'POST',
         headers: {
@@ -124,7 +136,9 @@ export default function Dashboard() {
           setEmails([]);
         } else {
           const data = await res.json();
+          console.log('Fetched emails:', data);
           const newEmails = Array.isArray(data) ? data : data.mails || [];
+          console.log('Parsed emails:', newEmails);
           setEmails(newEmails);
 
           if (newEmails.length > 0) {
