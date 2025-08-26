@@ -100,7 +100,7 @@ async function createOutlookDraft(session, ai_reply, mail_id) {
             .api(`/me/messages/${draftReply.id}`)
             .update({
                 body: {
-                    contentType: 'Text', // Pas aan naar 'HTML' indien ai_reply HTML bevat
+                    contentType: 'HTML', // Pas aan naar 'HTML' indien ai_reply HTML bevat
                     content: combinedBody
                 }
             });
