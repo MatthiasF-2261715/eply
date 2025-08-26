@@ -73,7 +73,7 @@ export default function Dashboard() {
     try {
       console.log('Verzoek verzenden naar AI Reply endpoint met payload:', {
         email: emailAddress,
-        titel: title,
+        title: title,
         content: content,
         originalMailId: originalMailId
       });
@@ -86,7 +86,7 @@ export default function Dashboard() {
         credentials: 'include',
         body: JSON.stringify({
           email: emailAddress,
-          titel: title,
+          title: title,
           content: content,
           originalMailId: originalMailId
         })
