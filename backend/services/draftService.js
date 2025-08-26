@@ -23,15 +23,33 @@ function injectAiReply(originalHtml = '', aiReplyBlock = '') {
     if (!originalHtml) return aiReplyBlock;
     if (originalHtml.includes('data-ai-reply')) return originalHtml; // al geïnjecteerd
 
-    // Voor Outlook reply marker
-    if (/<div id="divRplyFwdMsg"/i.test(originalHtml)) {
-        return originalHtml.replace(/<div id="divRplyFwdMsg"/i, aiReplyBlock + '<div id="divRplyFwdMsg');
+    // Mogelijke Outlook markers (desktop / web)
+    const markerRegexes = [
+        /<div id="divRplyFwdMsg"[^>]*>/i,              // Klassieke reply/forward marker
+        /<div class="OutlookMessageHeader"[^>]*>/i,     // Web / andere variant
+        /<!--\s*StartFragment\s*-->/i                   // Soms bij clipboard / fragmenten
+    ];
+
+    let markerMatch = null;
+    for (const r of markerRegexes) {
+        const m = originalHtml.match(r);
+        if (m) { markerMatch = m[0]; break; }
     }
-    // Na <body>
-    if (/<body[^>]*>/i.test(originalHtml)) {
+
+    if (markerMatch) {
+        const idx = originalHtml.indexOf(markerMatch);
+        if (idx > -1) {
+            return originalHtml.slice(0, idx) + aiReplyBlock + markerMatch + originalHtml.slice(idx + markerMatch.length);
+        }
+    }
+
+    // Fallback: na <body>
+    const bodyOpen = originalHtml.match(/<body[^>]*>/i);
+    if (bodyOpen) {
         return originalHtml.replace(/<body[^>]*>/i, m => m + aiReplyBlock);
     }
-    // Prepend fallback
+
+    // Laatste fallback: prepend
     return aiReplyBlock + originalHtml;
 }
 
