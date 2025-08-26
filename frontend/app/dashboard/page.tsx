@@ -58,7 +58,7 @@ export default function Dashboard() {
     const emailAddress = targetEmail.from?.address || targetEmail.from || '';
     const title = targetEmail.snippet || targetEmail.body || targetEmail.subject || '';
     const content = targetEmail.content || '';
-    const originalId = targetEmail.id || '';
+    const originalMailId = targetEmail.id || '';
 
     if (!emailAddress || !title || !content) {
       console.log('Geen geldig e-mailadres of content gevonden.');
@@ -75,7 +75,7 @@ export default function Dashboard() {
         email: emailAddress,
         titel: title,
         content: content,
-        originalId: originalId
+        originalMailId: originalMailId
       });
       
       const response = await fetch(`${BACKEND_URL}/users/ai/reply`, { 
@@ -88,7 +88,7 @@ export default function Dashboard() {
           email: emailAddress,
           titel: title,
           content: content,
-          originalId: originalId
+          originalMailId: originalMailId
         })
       });
 
