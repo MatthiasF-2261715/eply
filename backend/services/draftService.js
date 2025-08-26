@@ -73,34 +73,45 @@ async function createImapDraft(session, content, originalMail) {
     });
 }
 
+function escapeHtml(str = '') {
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function buildInjectedBody(originalHtml, aiText) {
+    const escaped = escapeHtml(aiText);
+    const snippet = `<div style="white-space:pre-wrap;font-family:inherit;">${escaped}</div><br><br>`;
+    if (!originalHtml) return snippet;
+    if (/<body[^>]*>/i.test(originalHtml)) {
+        return originalHtml.replace(/<body[^>]*>/i, m => `${m}${snippet}`);
+    }
+    return `${snippet}${originalHtml}`;
+}
+
 async function createOutlookDraft(session, ai_reply, mail_id) {
-    if (!session?.accessToken) {
-        throw new Error('No access token available');
-    }
-    if (!mail_id) {
-        throw new Error('mail_id is required to create a reply draft');
-    }
+    if (!session?.accessToken) throw new Error('No access token available');
+    if (!mail_id) throw new Error('mail_id is required to create a reply draft');
 
     const client = Client.init({
-        authProvider: (done) => done(null, session.accessToken)
+        authProvider: done => done(null, session.accessToken)
     });
 
     try {
-        // 1. Maak een echte reply draft (niet reply-all)
         const draftReply = await client
             .api(`/me/messages/${mail_id}/createReply`)
             .post();
 
-        // 2. Combineer AI reply boven de bestaande (gequote) body
         const originalBody = draftReply?.body?.content || '';
-        const combinedBody = `${ai_reply}\n\n${originalBody}`;
+        const combinedBody = buildInjectedBody(originalBody, ai_reply);
 
-        // 3. Update draft met jouw content
         const updatedDraft = await client
             .api(`/me/messages/${draftReply.id}`)
             .update({
                 body: {
-                    contentType: 'HTML', // Pas aan naar 'HTML' indien ai_reply HTML bevat
+                    contentType: 'HTML',
                     content: combinedBody
                 }
             });
