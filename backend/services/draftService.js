@@ -1,6 +1,5 @@
 const Imap = require('imap');
 const { Client } = require('@microsoft/microsoft-graph-client');
-const { simpleParser } = require('mailparser'); // <-- toegevoegd
 
 async function createImapDraft(session, ai_reply, mail_id, { mailbox = 'INBOX', treatAsUid = true } = {}) {
     return new Promise((resolve, reject) => {
@@ -14,7 +13,7 @@ async function createImapDraft(session, ai_reply, mail_id, { mailbox = 'INBOX', 
             tlsOptions: { rejectUnauthorized: false }
         });
 
-        function buildReplyAndAppend(originalHeaders, originalPlainText) {  // param naam aangepast
+        function buildReplyAndAppend(originalHeaders, originalBody) {
             const subjectOriginal = (originalHeaders.subject && originalHeaders.subject[0]) || '';
             const subject = /^Re:/i.test(subjectOriginal) ? subjectOriginal : 'Re: ' + subjectOriginal;
 
@@ -28,26 +27,24 @@ async function createImapDraft(session, ai_reply, mail_id, { mailbox = 'INBOX', 
             if (originalHeaders.references) {
                 references = originalHeaders.references[0].trim().split(/\s+/);
             }
-            if (originalMessageId) references.push(originalMessageId);
+            if (originalMessageId) {
+                references.push(originalMessageId);
+            }
+            // Unieke references
             references = [...new Set(references)];
 
-            const inReplyTo = originalMessageId || '';
+            const inReplyTo = originalMessageId ? originalMessageId : '';
+
             const newMessageId = '<' + Date.now() + Math.random().toString().slice(2) + '@' + imapServer + '>';
 
-            // Cleane plain text quote
+            // Simpele quote van originele body (alleen eerste 1000 chars om te beperken)
             let quoted = '';
-            if (originalPlainText) {
-                const cleaned = originalPlainText
-                    .replace(/\r/g, '')
-                    .split('\n')
-                    .map(l => l.trimEnd())
-                    .filter((l, idx, arr) => {
-                        // verwijder dubbele lege regels
-                        if (l.trim() !== '') return true;
-                        return idx === 0 || arr[idx - 1].trim() !== '';
-                    })
-                    .slice(0, 200); // max 200 regels quoten
-                quoted = cleaned.map(l => '> ' + l).join('\r\n');
+            if (originalBody) {
+                const trimmed = originalBody.slice(0, 10000); // limiet
+                quoted = trimmed
+                    .split(/\r?\n/)
+                    .map(l => '> ' + l)
+                    .join('\r\n');
             }
 
             const replyBody = [
@@ -71,17 +68,25 @@ async function createImapDraft(session, ai_reply, mail_id, { mailbox = 'INBOX', 
             ].filter(Boolean).join('\r\n');
 
             const draftMessage = headers + '\r\n\r\n' + replyBody + '\r\n';
+
             const draftFolder = 'Drafts';
             imap.openBox(draftFolder, false, (err) => {
-                if (err) return reject(err);
+                if (err) {
+                    console.log('Error opening Drafts:', err);
+                    return reject(err);
+                }
                 imap.append(draftMessage, { mailbox: draftFolder, flags: ['\\Draft'] }, (err) => {
-                    if (err) return reject(err);
+                    if (err) {
+                        console.log('Error appending draft:', err);
+                        return reject(err);
+                    }
+                    // Klein uitstel om zeker te zijn dat server klaar is
                     setTimeout(() => {
                         imap.closeBox(true, () => {
                             imap.end();
                             resolve({ messageId: newMessageId });
                         });
-                    }, 500);
+                    }, 1000);
                 });
             });
         }
@@ -131,28 +136,7 @@ async function createImapDraft(session, ai_reply, mail_id, { mailbox = 'INBOX', 
                         return reject(new Error('Geen headers gevonden voor mail_id ' + mail_id));
                     }
                     const originalHeaders = Imap.parseHeader(headerBuffer);
-                    // Parse MIME body naar plain text
-                    simpleParser(bodyBuffer, (err, parsed) => {
-                        if (err) {
-                            console.warn('Parser fout, fallback raw text:', err);
-                            return buildReplyAndAppend(originalHeaders, bodyBuffer);
-                        }
-                        let plain = parsed.text;
-                        if ((!plain || !plain.trim()) && parsed.html) {
-                            // HTML fallback strip tags
-                            plain = parsed.html
-                                .replace(/<style[\s\S]*?<\/style>/gi, '')
-                                .replace(/<script[\s\S]*?<\/script>/gi, '')
-                                .replace(/<[^>]+>/g, ' ')
-                                .replace(/&nbsp;/gi, ' ')
-                                .replace(/&amp;/gi, '&')
-                                .replace(/&lt;/gi, '<')
-                                .replace(/&gt;/gi, '>')
-                                .replace(/\s+/g, ' ')
-                                .trim();
-                        }
-                        buildReplyAndAppend(originalHeaders, plain || '');
-                    });
+                    buildReplyAndAppend(originalHeaders, bodyBuffer);
                 });
             });
         });
