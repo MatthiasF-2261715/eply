@@ -1,6 +1,7 @@
-const { ImapFlow } = require('imapflow');
+const Imap = require('imap');
 const { transformMail } = require('../utils/emailTransform');
 
+// Connection pool to reuse IMAP connections
 const connectionPool = new Map();
 
 function getConnectionKey(imapConfig) {
@@ -8,139 +9,214 @@ function getConnectionKey(imapConfig) {
 }
 
 function setupImap(imapConfig) {
-    return new ImapFlow({
+    return new Imap({
+        user: imapConfig.email,
+        password: imapConfig.password,
         host: imapConfig.imapServer,
         port: parseInt(imapConfig.port, 10),
-        secure: true,
-        auth: {
-            user: imapConfig.email,
-            pass: imapConfig.password
-        },
-        tls: { rejectUnauthorized: false },
-        logger: false
+        tls: true,
+        tlsOptions: { rejectUnauthorized: false },
+        connTimeout: 10000,
+        authTimeout: 5000,
+        keepalive: {
+            interval: 10000,
+            idleInterval: 300000,
+            forceNoop: true
+        }
     });
 }
 
 async function getImapConnection(imapConfig) {
-    const key = getConnectionKey(imapConfig);
-    let client = connectionPool.get(key);
-    if (client && !client.closed) {
-        return client;
+    const connectionKey = getConnectionKey(imapConfig);
+    let connection = connectionPool.get(connectionKey);
+    
+    if (connection && connection.state === 'authenticated') {
+        return connection;
     }
-    if (client && client.closed) {
-        connectionPool.delete(key);
+    
+    // Clean up old connection if exists
+    if (connection) {
+        try {
+            connection.end();
+        } catch (e) {
+            // Ignore cleanup errors
+        }
+        connectionPool.delete(connectionKey);
     }
+    
+    return new Promise((resolve, reject) => {
+        const imap = setupImap(imapConfig);
+        let timeoutId = setupTimeout(imap, reject);
 
-    client = setupImap(imapConfig);
-
-    const timeoutMs = 30000;
-    const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('IMAP connection timeout')), timeoutMs)
-    );
-
-    try {
-        await Promise.race([client.connect(), timeoutPromise]);
-        connectionPool.set(key, client);
-        client.on('close', () => {
-            connectionPool.delete(key);
+        imap.once('ready', function () {
+            clearTimeout(timeoutId);
+            connectionPool.set(connectionKey, imap);
+            resolve(imap);
         });
-        return client;
-    } catch (err) {
-        try { await client.logout().catch(()=>{}); } catch(e){}
-        throw err;
+
+        setupImapListeners(imap, timeoutId, reject, connectionKey);
+        imap.connect();
+    });
+}
+
+async function getImapSentEmails(imapConfig) {
+    let imap;
+    try {
+        imap = await getImapConnection(imapConfig);
+        return await tryFindSentFolder(imap);
+    } catch (error) {
+        console.error('Error getting sent emails:', error);
+        throw error;
     }
 }
 
 async function getImapInboxEmails(imapConfig) {
-    const client = await getImapConnection(imapConfig);
-    return fetchRecentEmails(client, 'INBOX');
-}
-
-async function getImapSentEmails(imapConfig) {
-    const client = await getImapConnection(imapConfig);
-    const sentFolders = [
-        '[Gmail]/Sent Mail',
-        '[Gmail]/Sent Messages',
-        'Sent',
-        'Sent Items',
-        'SENT',
-        'Sent Messages'
-    ];
-    for (const folder of sentFolders) {
-        try {
-            return await fetchRecentEmails(client, folder);
-        } catch (_) {
-            // probeer volgende
-        }
-    }
-    throw new Error('Could not find sent folder');
-}
-
-async function fetchRecentEmails(client, mailbox) {
+    let imap;
     try {
-        await client.mailboxOpen(mailbox, { readOnly: true });
-    } catch (e) {
-        throw new Error(`Could not open mailbox ${mailbox}`);
+        imap = await getImapConnection(imapConfig);
+        return await openInbox(imap);
+    } catch (error) {
+        console.error('Error getting inbox emails:', error);
+        throw error;
     }
-
-    const exists = client.mailbox.exists || 0;
-    if (exists === 0) return [];
-
-    const start = Math.max(1, exists - 9); // laatste 10
-    const range = `${start}:${exists}`;
-
-    const mails = [];
-
-    // Fetch envelope + raw bron
-    for await (const msg of client.fetch(range, {
-        envelope: true,
-        uid: true,
-        flags: true,
-        internalDate: true,
-        source: true
-    })) {
-        const envelope = msg.envelope || {};
-        const header = {
-            from: (envelope.from || []).map(a => a.address).join(', '),
-            to: (envelope.to || []).map(a => a.address).join(', '),
-            subject: envelope.subject || '',
-            date: envelope.date ? new Date(envelope.date).toUTCString() : ''
-        };
-
-        const body = msg.source ? msg.source.toString('utf8') : '';
-
-        const attrs = {
-            uid: msg.uid,
-            seq: msg.seq,
-            flags: msg.flags,
-            internalDate: msg.internalDate
-        };
-
-        const transformedMail = transformMail(
-            { header, body, attrs, content: body },
-            'imap'
-        );
-        mails.push(transformedMail);
-    }
-
-    // Zelfde volgorde als originele implementatie (nieuwste bovenaan)
-    return mails.reverse();
 }
 
-async function closeAllConnections() {
-    const closes = [];
-    for (const [key, client] of connectionPool) {
-        if (!client.closed) {
-            closes.push(
-                client.logout().catch(() => {})
-            );
+function setupTimeout(imap, reject) {
+    return setTimeout(() => {
+        try {
+            imap.end();
+        } catch (e) {
+            // Ignore cleanup errors
         }
-        connectionPool.delete(key);
-    }
-    await Promise.all(closes);
+        reject(new Error('IMAP connection timeout'));
+    }, 30000);
 }
 
-process.on('SIGINT', () => { closeAllConnections().finally(()=>process.exit(0)); });
-process.on('SIGTERM', () => { closeAllConnections().finally(()=>process.exit(0)); });
+function setupImapListeners(imap, timeoutId, reject, connectionKey) {
+    imap.once('error', (err) => {
+        clearTimeout(timeoutId);
+        if (connectionKey) {
+            connectionPool.delete(connectionKey);
+        }
+        reject(new Error(`IMAP error: ${err.message}`));
+    });
+
+    imap.once('end', () => {
+        clearTimeout(timeoutId);
+        if (connectionKey) {
+            connectionPool.delete(connectionKey);
+        }
+    });
+
+    imap.once('close', () => {
+        if (connectionKey) {
+            connectionPool.delete(connectionKey);
+        }
+    });
+}
+
+function openInbox(imap) {
+    return new Promise((resolve, reject) => {
+        imap.openBox('INBOX', true, (err, box) => {
+            if (err) {
+                reject(new Error('Could not open inbox'));
+                return;
+            }
+            fetchEmails(imap, box, resolve, reject);
+        });
+    });
+}
+
+function tryFindSentFolder(imap) {
+    return new Promise((resolve, reject) => {
+        const sentFolders = ['[Gmail]/Sent Mail', 'Sent', 'SENT'];
+        let folderIndex = 0;
+
+        function tryNextFolder() {
+            if (folderIndex >= sentFolders.length) {
+                reject(new Error('Could not find sent folder'));
+                return;
+            }
+
+            imap.openBox(sentFolders[folderIndex], true, (err, box) => {
+                if (err) {
+                    folderIndex++;
+                    tryNextFolder();
+                    return;
+                }
+                fetchEmails(imap, box, resolve, reject);
+            });
+        }
+
+        tryNextFolder();
+    });
+}
+
+function fetchEmails(imap, box, resolve, reject) {
+    const mails = [];
+    const total = box.messages.total;
+    
+    if (total === 0) {
+        resolve([]);
+        return;
+    }
+    
+    const start = Math.max(1, total - 9);
+    const range = `${start}:${total}`;
+
+    const f = imap.seq.fetch(range, {
+        bodies: ['HEADER.FIELDS (FROM TO SUBJECT DATE)', 'TEXT'],
+        struct: true
+    });
+
+    f.on('message', (msg) => {
+        let mail = { header: null, body: '' };
+
+        msg.on('body', (stream, info) => {
+            let buffer = '';
+            stream.on('data', (chunk) => buffer += chunk.toString('utf8'));
+            stream.on('end', () => {
+                if (info.which === 'TEXT') {
+                    mail.body = buffer;
+                } else {
+                    mail.header = Imap.parseHeader(buffer);
+                }
+            });
+        });
+
+        msg.once('attributes', (attrs) => {
+            mail.attrs = attrs;
+        });
+
+        msg.once('end', () => {
+            const transformedMail = transformMail({ ...mail, content: mail.body }, 'imap');
+            mails.push(transformedMail);
+        });
+    });
+
+    f.once('error', (err) => {
+        reject(new Error(`Fetch error: ${err.message}`));
+    });
+
+    f.once('end', () => {
+        resolve(mails.reverse());
+    });
+}
+
+// Cleanup function to close all connections
+function closeAllConnections() {
+    for (const [key, connection] of connectionPool) {
+        try {
+            connection.end();
+        } catch (e) {
+            // Ignore cleanup errors
+        }
+    }
+    connectionPool.clear();
+}
+
+// Cleanup on process exit
+process.on('SIGINT', closeAllConnections);
+process.on('SIGTERM', closeAllConnections);
 
 module.exports = { getImapSentEmails, getImapInboxEmails, closeAllConnections };
