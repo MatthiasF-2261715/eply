@@ -1,6 +1,6 @@
 const Imap = require('imap');
 const { Client } = require('@microsoft/microsoft-graph-client');
-const { simpleParser } = require('mailparser'); 
+const { simpleParser } = require('mailparser'); // <-- toegevoegd
 
 async function createImapDraft(session, ai_reply, mail_id, { mailbox = 'INBOX', treatAsUid = true } = {}) {
     return new Promise((resolve, reject) => {
