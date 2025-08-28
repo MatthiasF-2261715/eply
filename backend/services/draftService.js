@@ -2,6 +2,7 @@ const Imap = require('imap');
 const { Client } = require('@microsoft/microsoft-graph-client');
 
 async function createImapDraft(session, ai_reply, mail_id, { mailbox = 'INBOX', treatAsUid = true } = {}) {
+    console.log('AI reply for draft: ', ai_reply);
     return new Promise((resolve, reject) => {
         const { email, password, imapServer, port } = session.imap;
         const imap = new Imap({
