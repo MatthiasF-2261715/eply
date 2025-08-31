@@ -1,235 +1,174 @@
 const Imap = require('imap');
 const { Client } = require('@microsoft/microsoft-graph-client');
-const { htmlToText } = require('html-to-text'); // nieuw: html -> text
+const { htmlToText } = require('html-to-text'); 
 
 async function createImapDraft(session, ai_reply, mail_id, { mailbox = 'INBOX', treatAsUid = true } = {}) {
-    console.log('AI reply for draft: ', ai_reply);
-    return new Promise((resolve, reject) => {
-        const { email, password, imapServer, port } = session.imap;
-        const imap = new Imap({
-            user: email,
-            password,
-            host: imapServer,
-            port: parseInt(port, 10),
-            tls: true,
-            tlsOptions: { rejectUnauthorized: false }
-        });
+    if (!session?.imap) throw new Error('IMAP sessie ontbreekt');
+    if (!ai_reply) throw new Error('ai_reply ontbreekt');
+    if (!mail_id) throw new Error('mail_id ontbreekt');
 
-        function buildReplyAndAppend(originalHeaders, originalBody) {
-            const subjectOriginal = (originalHeaders.subject && originalHeaders.subject[0]) || '';
-            const subject = /^Re:/i.test(subjectOriginal) ? subjectOriginal : 'Re: ' + subjectOriginal;
+    const { email, password, imapServer, port } = session.imap;
+    const imap = new Imap({
+        user: email,
+        password,
+        host: imapServer,
+        port: parseInt(port, 10),
+        tls: true,
+        tlsOptions: { rejectUnauthorized: false }
+    });
 
-            const replyTo = originalHeaders['reply-to'] ? originalHeaders['reply-to'][0] : null;
-            const fromOriginal = originalHeaders.from ? originalHeaders.from[0] : '';
-            const toHeader = replyTo || fromOriginal;
+    const QUOTE_LIMIT = 10000;
+    const DRAFTS = 'Drafts';
 
-            const originalMessageId = originalHeaders['message-id'] ? originalHeaders['message-id'][0] : null;
-
-            let references = [];
-            if (originalHeaders.references) {
-                references = originalHeaders.references[0].trim().split(/\s+/);
+    function findPart(struct, subtype) {
+        if (!struct) return null;
+        for (const p of struct) {
+            if (Array.isArray(p)) {
+                const n = findPart(p, subtype);
+                if (n) return n;
+            } else if (p?.type === 'text' && p?.subtype?.toLowerCase() === subtype) {
+                return p;
+            } else if (p?.parts) {
+                const n = findPart(p.parts, subtype);
+                if (n) return n;
             }
-            if (originalMessageId) {
-                references.push(originalMessageId);
-            }
-            // Unieke references
-            references = [...new Set(references)];
-
-            const inReplyTo = originalMessageId ? originalMessageId : '';
-
-            const newMessageId = '<' + Date.now() + Math.random().toString().slice(2) + '@' + imapServer + '>';
-
-            // Simpele quote van originele body (alleen eerste 1000 chars om te beperken)
-            let quoted = '';
-            if (originalBody) {
-                const trimmed = originalBody.slice(0, 10000); // limiet
-                quoted = trimmed
-                    .split(/\r?\n/)
-                    .map(l => '> ' + l)
-                    .join('\r\n');
-            }
-
-            const replyBody = [
-                ai_reply.trim(),
-                '',
-                quoted
-            ].join('\r\n');
-
-            const headers = [
-                'From: <' + email + '>',
-                'To: ' + toHeader,
-                originalHeaders.cc ? 'Cc: ' + originalHeaders.cc.join(', ') : null,
-                'Subject: ' + subject.replace(/[\r\n]/g, ''),
-                'Message-ID: ' + newMessageId,
-                inReplyTo ? 'In-Reply-To: ' + inReplyTo : null,
-                references.length ? 'References: ' + references.join(' ') : null,
-                'Date: ' + new Date().toUTCString(),
-                'MIME-Version: 1.0',
-                'Content-Type: text/plain; charset=utf-8',
-                'Content-Transfer-Encoding: 7bit'
-            ].filter(Boolean).join('\r\n');
-
-            const draftMessage = headers + '\r\n\r\n' + replyBody + '\r\n';
-
-            const draftFolder = 'Drafts';
-            imap.openBox(draftFolder, false, (err) => {
-                if (err) {
-                    console.log('Error opening Drafts:', err);
-                    return reject(err);
-                }
-                imap.append(draftMessage, { mailbox: draftFolder, flags: ['\\Draft'] }, (err) => {
-                    if (err) {
-                        console.log('Error appending draft:', err);
-                        return reject(err);
-                    }
-                    // Klein uitstel om zeker te zijn dat server klaar is
-                    setTimeout(() => {
-                        imap.closeBox(true, () => {
-                            imap.end();
-                            resolve({ messageId: newMessageId });
-                        });
-                    }, 1000);
-                });
-            });
         }
+        return null;
+    }
 
-        imap.once('ready', () => {
-            imap.openBox(mailbox, false, (err) => {
-                if (err) {
-                    console.log('Error opening mailbox:', err);
-                    imap.end();
-                    return reject(err);
-                }
-
-                // Alleen headers + structuur
-                const fetchOptions = {
-                    bodies: [
-                        'HEADER.FIELDS (FROM TO CC SUBJECT MESSAGE-ID REFERENCES IN-REPLY-TO REPLY-TO)'
-                    ],
-                    struct: true
-                };
-                if (treatAsUid) fetchOptions.uid = true;
-
-                const f = imap.fetch(mail_id, fetchOptions);
-                let headerBuffer = '';
-                let msgAttrs = null;
-
-                f.on('message', (msg) => {
-                    msg.on('body', (stream, info) => {
-                        let chunk = '';
-                        stream.on('data', (d) => { chunk += d.toString('utf8'); });
-                        stream.on('end', () => {
-                            if (info.which && info.which.startsWith('HEADER')) {
-                                headerBuffer += chunk;
-                            }
-                        });
-                    });
-                    msg.on('attributes', (attrs) => { msgAttrs = attrs; });
+    function fetchSingle(id, opts) {
+        return new Promise((resolve, reject) => {
+            if (treatAsUid) opts.uid = true;
+            const f = imap.fetch(id, opts);
+            const chunks = [];
+            let attrs = null;
+            f.on('message', msg => {
+                msg.on('body', stream => {
+                    stream.on('data', d => chunks.push(d));
                 });
+                msg.on('attributes', a => { attrs = a; });
+            });
+            f.once('error', reject);
+            f.once('end', () => resolve({ buffer: Buffer.concat(chunks), attrs }));
+        });
+    }
 
-                f.once('error', (err) => {
-                    console.log('Fetch error:', err);
-                    reject(err);
-                });
+    function fetchHeaders(id) {
+        return fetchSingle(id, {
+            bodies: ['HEADER.FIELDS (FROM TO CC SUBJECT MESSAGE-ID REFERENCES IN-REPLY-TO REPLY-TO)'],
+            struct: true
+        });
+    }
 
-                f.once('end', async () => {
-                    if (!headerBuffer) {
-                        return reject(new Error('Geen headers gevonden voor mail_id ' + mail_id));
-                    }
-                    const originalHeaders = Imap.parseHeader(headerBuffer);
-
-                    // Zoek geschikte body part
-                    function findPart(struct, wantSubtype) {
-                        let found = null;
-                        (struct || []).forEach(p => {
-                            if (found) return;
-                            if (Array.isArray(p)) {
-                                const nested = findPart(p, wantSubtype);
-                                if (nested) found = nested;
-                            } else if (p && p.type === 'text' && p.subtype && p.subtype.toLowerCase() === wantSubtype) {
-                                found = p;
-                            } else if (p && p.parts) {
-                                const nested = findPart(p.parts, wantSubtype);
-                                if (nested) found = nested;
-                            }
-                        });
-                        return found;
-                    }
-
-                    async function fetchBodyPart(part, isHtml) {
-                        return new Promise((res, rej) => {
-                            if (!part || !part.partID) return res('');
-                            const opts = { bodies: [part.partID], struct: false };
-                            if (treatAsUid) opts.uid = true;
-                            const fb = imap.fetch(mail_id, opts);
-                            let buf = '';
-                            fb.on('message', (m) => {
-                                m.on('body', (s) => {
-                                    s.on('data', d => buf += d.toString(part.params?.charset ? undefined : 'utf8'));
-                                });
-                            });
-                            fb.once('error', rej);
-                            fb.once('end', () => {
-                                if (isHtml) {
-                                    try {
-                                        buf = htmlToText(buf, {
-                                            wordwrap: false,
-                                            selectors: [
-                                                { selector: 'a', options: { hideLinkHrefIfSameAsText: true } }
-                                            ]
-                                        }).trim();
-                                    } catch (e) {
-                                        console.log('htmlToText error:', e);
-                                    }
-                                }
-                                res(buf);
-                            });
-                        });
-                    }
-
+    function fetchPartText(id, part, isHtml) {
+        if (!part?.partID) return Promise.resolve('');
+        return new Promise((resolve, reject) => {
+            const opts = { bodies: [part.partID], struct: false };
+            if (treatAsUid) opts.uid = true;
+            const f = imap.fetch(id, opts);
+            const chunks = [];
+            f.on('message', m => {
+                m.on('body', s => s.on('data', d => chunks.push(d)));
+            });
+            f.once('error', reject);
+            f.once('end', () => {
+                let txt = Buffer.concat(chunks).toString(part.params?.charset ? undefined : 'utf8');
+                if (isHtml) {
                     try {
-                        let plainPart = null;
-                        let htmlPart = null;
-                        if (msgAttrs && msgAttrs.struct) {
-                            plainPart = findPart(msgAttrs.struct, 'plain');
-                            htmlPart = findPart(msgAttrs.struct, 'html');
-                        }
-
-                        let originalBody = '';
-                        if (plainPart) {
-                            originalBody = await fetchBodyPart(plainPart, false);
-                        } else if (htmlPart) {
-                            originalBody = await fetchBodyPart(htmlPart, true);
-                        }
-
-                        // Normaliseer lijnen (verwijder mogelijke overgebleven CR issues)
-                        originalBody = (originalBody || '')
-                            .replace(/\r\n/g, '\n')
-                            .replace(/\r/g, '\n')
-                            .split('\n')
-                            .map(l => l.replace(/\s+$/,''))
-                            .join('\n')
-                            .trim();
-
-                        buildReplyAndAppend(originalHeaders, originalBody);
-                    } catch (e) {
-                        console.log('Body processing error:', e);
-                        reject(e);
-                    }
-                });
+                        txt = htmlToText(txt, {
+                            wordwrap: false,
+                            selectors: [{ selector: 'a', options: { hideLinkHrefIfSameAsText: true } }]
+                        }).trim();
+                    } catch {}
+                }
+                resolve(txt);
             });
         });
+    }
 
-        imap.once('error', (err) => {
-            console.log('IMAP connection error:', err);
-            reject(err);
+    return new Promise((resolve, reject) => {
+        let done = false;
+
+        imap.once('ready', async () => {
+            try {
+                // Open source mailbox
+                await new Promise((res, rej) => imap.openBox(mailbox, false, e => e ? rej(e) : res()));
+
+                // Headers + struct
+                const { buffer, attrs } = await fetchHeaders(mail_id);
+                if (!buffer.length) throw new Error('Geen headers gevonden');
+                const originalHeaders = Imap.parseHeader(buffer.toString('utf8'));
+
+                // Body ophalen (plain > html fallback)
+                let originalBody = '';
+                if (attrs?.struct) {
+                    const plain = findPart(attrs.struct, 'plain');
+                    const html = findPart(attrs.struct, 'html');
+                    if (plain) originalBody = await fetchPartText(mail_id, plain, false);
+                    else if (html) originalBody = await fetchPartText(mail_id, html, true);
+                }
+                originalBody = originalBody
+                    .replace(/\r\n/g, '\n')
+                    .replace(/\r/g, '\n')
+                    .split('\n')
+                    .map(l => l.replace(/\s+$/, ''))
+                    .join('\n')
+                    .trim();
+
+                // Headers samenstellen
+                const subjectOrig = originalHeaders.subject?.[0] || '';
+                const subject = /^Re:/i.test(subjectOrig) ? subjectOrig : 'Re: ' + subjectOrig;
+                const replyTo = originalHeaders['reply-to']?.[0];
+                const toHeader = replyTo || originalHeaders.from?.[0] || '';
+                const origMsgId = originalHeaders['message-id']?.[0] || '';
+                const refSet = new Set();
+                if (originalHeaders.references?.[0]) originalHeaders.references[0].trim().split(/\s+/).forEach(r => refSet.add(r));
+                if (origMsgId) refSet.add(origMsgId);
+                const references = Array.from(refSet);
+                const newMessageId = `<${Date.now()}${Math.random().toString().slice(2)}@${imapServer}>`;
+
+                const quoted = originalBody
+                    ? originalBody.slice(0, QUOTE_LIMIT).split('\n').map(l => '> ' + l).join('\r\n')
+                    : '';
+
+                const body = [ai_reply.trim(), '', quoted].join('\r\n');
+
+                const headerLines = [
+                    `From: <${email}>`,
+                    `To: ${toHeader}`,
+                    originalHeaders.cc ? 'Cc: ' + originalHeaders.cc.join(', ') : null,
+                    'Subject: ' + subject.replace(/[\r\n]/g, ''),
+                    'Message-ID: ' + newMessageId,
+                    origMsgId ? 'In-Reply-To: ' + origMsgId : null,
+                    references.length ? 'References: ' + references.join(' ') : null,
+                    'Date: ' + new Date().toUTCString(),
+                    'MIME-Version: 1.0',
+                    'Content-Type: text/plain; charset=utf-8',
+                    'Content-Transfer-Encoding: 7bit'
+                ].filter(Boolean).join('\r\n');
+
+                const draftRaw = headerLines + '\r\n\r\n' + body + '\r\n';
+
+                // Open Drafts en append
+                await new Promise((res, rej) => imap.openBox(DRAFTS, false, e => e ? rej(e) : res()));
+                await new Promise((res, rej) => imap.append(draftRaw, { mailbox: DRAFTS, flags: ['\\Draft'] }, e => e ? rej(e) : res()));
+
+                done = true;
+                resolve({ messageId: newMessageId });
+            } catch (e) {
+                reject(e);
+            } finally {
+                try { imap.closeBox(true, () => imap.end()); } catch { try { imap.end(); } catch {} }
+            }
         });
 
+        imap.once('error', err => { if (!done) reject(err); });
         imap.connect();
     });
 }
 
 async function createOutlookDraft(session, ai_reply, mail_id) {
+    console.log("ai replY:", ai_reply);
     if (!session?.accessToken) {
         throw new Error('No access token available');
     }
@@ -256,7 +195,7 @@ async function createOutlookDraft(session, ai_reply, mail_id) {
             .api(`/me/messages/${draftReply.id}`)
             .update({
                 body: {
-                    contentType: 'HTML', // Pas aan naar 'HTML' indien ai_reply HTML bevat
+                    contentType: 'HTML',
                     content: combinedBody
                 }
             });
