@@ -82,7 +82,7 @@ router.post('/ai/reply', isAuthenticated, async function (req, res) {
     console.log('Extracted email:', content);
     try {
         const sentEmails = await getSentEmails(req.session.method, req.session);
-        const assistantObj = await getAssistantByEmail(email);
+        const assistantObj = await getAssistantByEmail(req.session.email);
         const assistantId = assistantObj.assistant_id || assistantObj.id;
         
         const currentEmail = { from: email, title };
