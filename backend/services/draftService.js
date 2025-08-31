@@ -2,6 +2,13 @@ const Imap = require('imap');
 const { Client } = require('@microsoft/microsoft-graph-client');
 const { htmlToText } = require('html-to-text'); 
 
+function escapeHtml(str) {
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
 async function createImapDraft(session, ai_reply, mail_id, { mailbox = 'INBOX', treatAsUid = true } = {}) {
     if (!session?.imap) throw new Error('IMAP sessie ontbreekt');
     if (!ai_reply) throw new Error('ai_reply ontbreekt');
@@ -188,7 +195,9 @@ async function createOutlookDraft(session, ai_reply, mail_id) {
 
         // 2. Combineer AI reply boven de bestaande (gequote) body
         const originalBody = draftReply?.body?.content || '';
-        const combinedBody = `${ai_reply}\n\n${originalBody}`;
+        const aiReplyHtml = `<div style="white-space:pre-wrap;font-family:inherit;font-size:inherit;">${escapeHtml(ai_reply.trim())}</div>`;
+        const separator = originalBody ? '<br><br>' : '';
+        const combinedBody = `${aiReplyHtml}${separator}${originalBody}`;
 
         // 3. Update draft met jouw content
         const updatedDraft = await client
