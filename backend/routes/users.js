@@ -72,8 +72,13 @@ router.get('/mails', isAuthenticated, async function(req, res, next) {
     }
 });
 
+function getSessionEmail(req) {
+    return req.session.email || req.session?.imap?.email || req.session?.account?.username || null;
+}
+
 router.post('/ai/reply', isAuthenticated, async function (req, res) {
     let { email, title, content, originalMailId } = req.body;
+    const sessionEmail = getSessionEmail(req);
     console.log('AI reply request:', { email, title, content, originalMailId });
     if (!email || !content) {
         return res.status(400).json({ error: 'Email en content zijn verplicht.' });
@@ -82,7 +87,7 @@ router.post('/ai/reply', isAuthenticated, async function (req, res) {
     console.log('Extracted email:', content);
     try {
         const sentEmails = await getSentEmails(req.session.method, req.session);
-        const assistantObj = await getAssistantByEmail(req.session.email);
+        const assistantObj = await getAssistantByEmail(sessionEmail);
         const assistantId = assistantObj.assistant_id || assistantObj.id;
         
         const currentEmail = { from: email, title };
