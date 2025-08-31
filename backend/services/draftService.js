@@ -195,7 +195,11 @@ async function createOutlookDraft(session, ai_reply, mail_id) {
 
         // 2. Combineer AI reply boven de bestaande (gequote) body
         const originalBody = draftReply?.body?.content || '';
-        const aiReplyHtml = `<div style="white-space:pre-wrap;font-family:inherit;font-size:inherit;">${escapeHtml(ai_reply.trim())}</div>`;
+
+        // New: vervang newlines door <br> i.p.v. white-space:pre-wrap (Outlook negeert dat vaak)
+        const aiReplyHtml = `<div style="font-family:inherit;font-size:inherit;">${escapeHtml(ai_reply.trim())
+            .replace(/\r\n|\r|\n/g, '<br>')}</div>`;
+
         const separator = originalBody ? '<br><br>' : '';
         const combinedBody = `${aiReplyHtml}${separator}${originalBody}`;
 
