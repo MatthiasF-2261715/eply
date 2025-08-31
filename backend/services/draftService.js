@@ -1,5 +1,6 @@
 const Imap = require('imap');
 const { Client } = require('@microsoft/microsoft-graph-client');
+const { htmlToText } = require('html-to-text'); // nieuw: html -> text
 
 async function createImapDraft(session, ai_reply, mail_id, { mailbox = 'INBOX', treatAsUid = true } = {}) {
     console.log('AI reply for draft: ', ai_reply);
@@ -100,18 +101,18 @@ async function createImapDraft(session, ai_reply, mail_id, { mailbox = 'INBOX', 
                     return reject(err);
                 }
 
+                // Alleen headers + structuur
                 const fetchOptions = {
                     bodies: [
-                        'HEADER.FIELDS (FROM TO CC SUBJECT MESSAGE-ID REFERENCES IN-REPLY-TO REPLY-TO)',
-                        'TEXT'
+                        'HEADER.FIELDS (FROM TO CC SUBJECT MESSAGE-ID REFERENCES IN-REPLY-TO REPLY-TO)'
                     ],
-                    struct: false
+                    struct: true
                 };
                 if (treatAsUid) fetchOptions.uid = true;
 
                 const f = imap.fetch(mail_id, fetchOptions);
                 let headerBuffer = '';
-                let bodyBuffer = '';
+                let msgAttrs = null;
 
                 f.on('message', (msg) => {
                     msg.on('body', (stream, info) => {
@@ -120,11 +121,10 @@ async function createImapDraft(session, ai_reply, mail_id, { mailbox = 'INBOX', 
                         stream.on('end', () => {
                             if (info.which && info.which.startsWith('HEADER')) {
                                 headerBuffer += chunk;
-                            } else {
-                                bodyBuffer += chunk;
                             }
                         });
                     });
+                    msg.on('attributes', (attrs) => { msgAttrs = attrs; });
                 });
 
                 f.once('error', (err) => {
@@ -132,12 +132,90 @@ async function createImapDraft(session, ai_reply, mail_id, { mailbox = 'INBOX', 
                     reject(err);
                 });
 
-                f.once('end', () => {
+                f.once('end', async () => {
                     if (!headerBuffer) {
                         return reject(new Error('Geen headers gevonden voor mail_id ' + mail_id));
                     }
                     const originalHeaders = Imap.parseHeader(headerBuffer);
-                    buildReplyAndAppend(originalHeaders, bodyBuffer);
+
+                    // Zoek geschikte body part
+                    function findPart(struct, wantSubtype) {
+                        let found = null;
+                        (struct || []).forEach(p => {
+                            if (found) return;
+                            if (Array.isArray(p)) {
+                                const nested = findPart(p, wantSubtype);
+                                if (nested) found = nested;
+                            } else if (p && p.type === 'text' && p.subtype && p.subtype.toLowerCase() === wantSubtype) {
+                                found = p;
+                            } else if (p && p.parts) {
+                                const nested = findPart(p.parts, wantSubtype);
+                                if (nested) found = nested;
+                            }
+                        });
+                        return found;
+                    }
+
+                    async function fetchBodyPart(part, isHtml) {
+                        return new Promise((res, rej) => {
+                            if (!part || !part.partID) return res('');
+                            const opts = { bodies: [part.partID], struct: false };
+                            if (treatAsUid) opts.uid = true;
+                            const fb = imap.fetch(mail_id, opts);
+                            let buf = '';
+                            fb.on('message', (m) => {
+                                m.on('body', (s) => {
+                                    s.on('data', d => buf += d.toString(part.params?.charset ? undefined : 'utf8'));
+                                });
+                            });
+                            fb.once('error', rej);
+                            fb.once('end', () => {
+                                if (isHtml) {
+                                    try {
+                                        buf = htmlToText(buf, {
+                                            wordwrap: false,
+                                            selectors: [
+                                                { selector: 'a', options: { hideLinkHrefIfSameAsText: true } }
+                                            ]
+                                        }).trim();
+                                    } catch (e) {
+                                        console.log('htmlToText error:', e);
+                                    }
+                                }
+                                res(buf);
+                            });
+                        });
+                    }
+
+                    try {
+                        let plainPart = null;
+                        let htmlPart = null;
+                        if (msgAttrs && msgAttrs.struct) {
+                            plainPart = findPart(msgAttrs.struct, 'plain');
+                            htmlPart = findPart(msgAttrs.struct, 'html');
+                        }
+
+                        let originalBody = '';
+                        if (plainPart) {
+                            originalBody = await fetchBodyPart(plainPart, false);
+                        } else if (htmlPart) {
+                            originalBody = await fetchBodyPart(htmlPart, true);
+                        }
+
+                        // Normaliseer lijnen (verwijder mogelijke overgebleven CR issues)
+                        originalBody = (originalBody || '')
+                            .replace(/\r\n/g, '\n')
+                            .replace(/\r/g, '\n')
+                            .split('\n')
+                            .map(l => l.replace(/\s+$/,''))
+                            .join('\n')
+                            .trim();
+
+                        buildReplyAndAppend(originalHeaders, originalBody);
+                    } catch (e) {
+                        console.log('Body processing error:', e);
+                        reject(e);
+                    }
                 });
             });
         });
