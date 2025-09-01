@@ -143,4 +143,20 @@ router.get('/signout', (req, res, next) => {
     }
 });
 
+router.get('/signoutContact', (req, res, next) => {
+    if (req.session.method === 'outlook') {
+        authProvider.logout({
+            postLogoutRedirectUri: `${POST_LOGOUT_REDIRECT_URI}/contact`
+        })(req, res, next);
+    } else if (req.session.method === 'imap') {
+        req.session.destroy(() => {
+            res.redirect(`${POST_LOGOUT_REDIRECT_URI}/contact`);
+        });
+    } else {
+        req.session.destroy(() => {
+            res.redirect(`${POST_LOGOUT_REDIRECT_URI}/contact`);
+        });
+    }
+});
+
 module.exports = router;

@@ -32,13 +32,24 @@ export default function Dashboard() {
     })
       .then(async res => {
         if (!res.ok || res.redirected) {
-          router.replace('/contact');
+          const target = `${BACKEND_URL}/auth/signoutContact`;
+          try {
+            // Externe redirect
+            window.location.replace(target);
+          } catch {
+            router.replace(target);
+          }
         } else {
           console.log('User is whitelisted');
         }
       })
       .catch(() => {
-        router.replace('/contact');
+        const target = `${BACKEND_URL}/auth/signoutContact`;
+        try {
+          window.location.replace(target);
+        } catch {
+          router.replace(target);
+        }
       });
   }, [BACKEND_URL, router]);
 
