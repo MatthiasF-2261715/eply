@@ -22,10 +22,13 @@ export default function Dashboard() {
   const isInitialLoad = useRef(true);
   const [processedEmailIds, setProcessedEmailIds] = useState<Set<string>>(new Set());
   const [loadingReplies, setLoadingReplies] = useState<Set<string>>(new Set());
+  const [whitelistDone, setWhitelistDone] = useState(false);
+  const [profileDone, setProfileDone] = useState(false);
 
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   useEffect(() => {
+    let isMounted = true;
     fetch(`${BACKEND_URL}/users/isWhitelisted`, {
       credentials: 'include',
       method: 'GET',
@@ -33,12 +36,11 @@ export default function Dashboard() {
       .then(async res => {
         if (!res.ok || res.redirected) {
           const target = `${BACKEND_URL}/auth/signoutContact`;
-          try {
-            // Externe redirect
-            window.location.replace(target);
-          } catch {
-            router.replace(target);
-          }
+            try {
+              window.location.replace(target);
+            } catch {
+              router.replace(target);
+            }
         } else {
           console.log('User is whitelisted');
         }
@@ -50,10 +52,15 @@ export default function Dashboard() {
         } catch {
           router.replace(target);
         }
+      })
+      .finally(() => {
+        if (isMounted) setWhitelistDone(true);
       });
+    return () => { isMounted = false; };
   }, [BACKEND_URL, router]);
 
   useEffect(() => {
+    let isMounted = true;
     fetch(`${BACKEND_URL}/users/profile`, {
       credentials: 'include',
     })
@@ -63,14 +70,23 @@ export default function Dashboard() {
         } else {
           const data = await res.json();
           console.log('User profile data:', data);
-          setUsername(data.username);
-          setLoading(false);
+          if (isMounted) setUsername(data.username);
         }
       })
       .catch(() => {
         router.replace('/');
+      })
+      .finally(() => {
+        if (isMounted) setProfileDone(true);
       });
-  }, [router]);
+    return () => { isMounted = false; };
+  }, [BACKEND_URL, router]);
+
+  useEffect(() => {
+    if (whitelistDone && profileDone) {
+      setLoading(false);
+    }
+  }, [whitelistDone, profileDone]);
 
   const handleGenerateReply = async (emailToReply = null) => {
     const targetEmail = emailToReply || (emails.length ? emails[0] : null);
