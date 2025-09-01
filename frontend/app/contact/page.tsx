@@ -18,27 +18,10 @@ export default function ContactPage() {
       setStatus({ type: 'error', msg: 'Vul je e-mailadres en bericht in.' });
       return;
     }
-    if (!BACKEND_URL) {
-      window.location.href = `mailto:${INFO_EMAIL}?subject=Contact&body=${encodeURIComponent(message)}`;
-      return;
-    }
-    try {
-      setStatus({ type: 'loading' });
-      const res = await fetch(`${BACKEND_URL}/contact`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, message })
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Verzenden mislukt.');
-      }
-      setStatus({ type: 'success', msg: 'Bericht succesvol verzonden. We nemen zo snel mogelijk contact op.' });
-      setEmail('');
-      setMessage('');
-    } catch (err: any) {
-      setStatus({ type: 'error', msg: err.message || 'Er ging iets mis.' });
-    }
+    const subject = 'Contact';
+    const body = `Van: ${email}\n\n${message}`;
+    window.location.href = `mailto:${INFO_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    setStatus({ type: 'success', msg: 'Je e-mailclient is geopend.' });
   };
 
   return (
