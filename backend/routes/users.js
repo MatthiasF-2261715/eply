@@ -82,7 +82,25 @@ router.get('/isWhitelisted', isAuthenticated, async (req,res) => {
     try {
       const ok = await isUserWhitelisted(email);
       if (ok) return res.json({ whitelisted: true });
-      return res.status(403).json({ error: 'User is not whitelisted.' });
+      
+      // Niet whitelisted -> automatisch uitloggen
+      if (req.session) {
+        req.session.destroy(err => {
+          if (err) console.error('Session destroy error (not whitelisted):', err);
+          res.clearCookie('connect.sid');
+          return res.status(403).json({ 
+            error: 'User is not whitelisted. Uitgelogd.',
+            whitelisted: false,
+            loggedOut: true
+          });
+        });
+      } else {
+        return res.status(403).json({ 
+          error: 'User is not whitelisted. (Geen sessie)',
+          whitelisted: false,
+          loggedOut: true
+        });
+      }
     } catch (e) {
       return res.status(500).json({ error: e.message || 'Interne fout.' });
     }
