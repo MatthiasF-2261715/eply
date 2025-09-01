@@ -32,13 +32,13 @@ export default function Dashboard() {
     })
       .then(async res => {
         if (!res.ok || res.redirected) {
-          router.replace('/');
+          router.replace('/contact');
         } else {
           console.log('User is whitelisted');
         }
       })
       .catch(() => {
-        router.replace('/');
+        router.replace('/contact');
       });
   }, [BACKEND_URL, router]);
 
