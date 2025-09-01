@@ -76,6 +76,22 @@ function getSessionEmail(req) {
     return req.session.email || req.session?.imap?.email || req.session?.account?.username || null;
 }
 
+router.get('/isWhitelisted', isAuthenticated, async function(req, res) {
+    try {
+        const email = getSessionEmail(req);
+        if (!email) {
+            return res.status(400).json({ error: 'Geen e-mailadres in sessie.' });
+        }
+        const whitelisted = await getUserIdByEmail(email);
+        if (whitelisted) {
+            return res.json({ whitelisted: true });
+        }
+        return res.status(403).json({ error: 'User is not whitelisted.' });
+    } catch (err) {
+        return res.status(500).json({ error: err.message || 'Interne fout.' });
+    }
+});
+
 router.post('/ai/reply', isAuthenticated, async function (req, res) {
     let { email, title, content, originalMailId } = req.body;
     const sessionEmail = getSessionEmail(req);

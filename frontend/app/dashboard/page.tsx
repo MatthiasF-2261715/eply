@@ -26,6 +26,23 @@ export default function Dashboard() {
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   useEffect(() => {
+    fetch(`${BACKEND_URL}/users/isWhitelisted`, {
+      credentials: 'include',
+      method: 'GET',
+    })
+      .then(async res => {
+        if (!res.ok || res.redirected) {
+          router.replace('/');
+        } else {
+          console.log('User is whitelisted');
+        }
+      })
+      .catch(() => {
+        router.replace('/');
+      });
+  }, [BACKEND_URL, router]);
+
+  useEffect(() => {
     fetch(`${BACKEND_URL}/users/profile`, {
       credentials: 'include',
     })
