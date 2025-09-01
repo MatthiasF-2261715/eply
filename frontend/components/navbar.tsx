@@ -29,8 +29,8 @@ export function Navbar() {
   const navItems = [
     { href: '/', label: 'Home', show: true },
     { href: '/dashboard', label: 'Dashboard', show: isAuthenticated },
+    { href: '/contact', label: 'Contact', show: !isAuthenticated },
     { href: '/login', label: 'Login', show: !isAuthenticated },
-    { href: '/conact', label: 'Contact', show: !isAuthenticated },
   ];
 
   return (
