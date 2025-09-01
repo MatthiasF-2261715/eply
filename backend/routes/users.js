@@ -4,7 +4,7 @@ const { GRAPH_ME_ENDPOINT } = require('../auth/authConfig');
 const { isAuthenticated } = require('../middleware/auth');
 const { getInboxEmails, getSentEmails } = require('../services/emailService');
 const { createImapDraft, createOutlookDraft } = require('../services/draftService');
-const { getAssistantByEmail } = require('../database');
+const { getAssistantByEmail, isUserWhitelisted } = require('../database');
 const { useAssistant } = require('../assistant');
 const { extractEmail } = require('../utils/emailTransform');
 
@@ -76,21 +76,17 @@ function getSessionEmail(req) {
     return req.session.email || req.session?.imap?.email || req.session?.account?.username || null;
 }
 
-router.get('/isWhitelisted', isAuthenticated, async function(req, res) {
+router.get('/isWhitelisted', isAuthenticated, async (req,res) => {
+    const email = getSessionEmail(req);
+    if (!email) return res.status(400).json({ error: 'Geen e-mailadres in sessie.' });
     try {
-        const email = getSessionEmail(req);
-        if (!email) {
-            return res.status(400).json({ error: 'Geen e-mailadres in sessie.' });
-        }
-        const whitelisted = await getUserIdByEmail(email);
-        if (whitelisted) {
-            return res.json({ whitelisted: true });
-        }
-        return res.status(403).json({ error: 'User is not whitelisted.' });
-    } catch (err) {
-        return res.status(500).json({ error: err.message || 'Interne fout.' });
+      const ok = await isUserWhitelisted(email);
+      if (ok) return res.json({ whitelisted: true });
+      return res.status(403).json({ error: 'User is not whitelisted.' });
+    } catch (e) {
+      return res.status(500).json({ error: e.message || 'Interne fout.' });
     }
-});
+  });
 
 router.post('/ai/reply', isAuthenticated, async function (req, res) {
     let { email, title, content, originalMailId } = req.body;
