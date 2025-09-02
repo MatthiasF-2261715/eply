@@ -7,6 +7,7 @@ const { createImapDraft, createOutlookDraft } = require('../services/draftServic
 const { getAssistantByEmail, isUserWhitelisted } = require('../database');
 const { useAssistant } = require('../assistant');
 const { extractEmail } = require('../utils/emailTransform');
+const nodemailer = require('nodemailer');
 
 router.get('/id', isAuthenticated, async (req, res) => {
     res.render('id', { idTokenClaims: req.session.account?.idTokenClaims });
@@ -141,6 +142,62 @@ router.post('/ai/reply', isAuthenticated, async function (req, res) {
         console.error('Error in /ai/reply:', err);
         res.status(500).json({ error: err.message || 'AI response error' });
     }
+});
+
+router.post('/contact', async (req, res) => {
+    try {
+        const { name, email, message } = req.body || {};
+        if (!name || !email || !message) {
+            return res.status(400).json({ error: 'Naam, e-mail en bericht zijn verplicht.' });
+        }
+
+        // simpele sanity checks
+        if (name.length > 150 || email.length > 200 || message.length > 5000) {
+            return res.status(400).json({ error: 'Input te lang.' });
+        }
+
+        const FROM = process.env.CONTACT_FROM;
+        const TO = process.env.CONTACT_TO;
+
+        const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: Number(process.env.SMTP_PORT || 587),
+            secure: Number(process.env.SMTP_PORT) === 465,
+            auth: {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS
+            }
+        });
+
+        const subject = `Contactformulier: ${name}`;
+        const text =
+    `Nieuw contactformulier bericht:
+
+    Naam: ${name}
+    Email: ${email}
+
+    Bericht:
+    ${message}`;
+
+        const html = `<h3>Nieuw contactformulier bericht</h3>
+    <p><strong>Naam:</strong> ${name}</p>
+    <p><strong>Email:</strong> ${email}</p>
+    <p><strong>Bericht:</strong><br>${message.replace(/\n/g,'<br/>')}</p>`;
+
+        await transporter.sendMail({
+            from: FROM,
+            to: TO,
+            replyTo: email,
+            subject,
+            text,
+            html
+        });
+
+        return res.json({ ok: true });
+        } catch (e) {
+        console.error('Contact route error:', e);
+        return res.status(500).json({ error: 'Server fout bij versturen.' });
+        }
 });
 
 module.exports = router;

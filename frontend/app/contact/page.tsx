@@ -9,19 +9,32 @@ const INFO_EMAIL = 'info@eply.be';
 export default function ContactPage() {
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
   const [email, setEmail] = useState('');
+  const [name, setName] = useState(''); // nieuw
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState<{ type: 'idle' | 'loading' | 'success' | 'error'; msg?: string }>({ type: 'idle' });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !message) {
-      setStatus({ type: 'error', msg: 'Vul je e-mailadres en bericht in.' });
+    if (!name || !email || !message) {
+      setStatus({ type: 'error', msg: 'Vul naam, e-mail en bericht in.' });
       return;
     }
-    const subject = 'Contact';
-    const body = `Van: ${email}\n\n${message}`;
-    window.location.href = `mailto:${INFO_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    setStatus({ type: 'success', msg: 'Je e-mailclient is geopend.' });
+    setStatus({ type: 'loading' });
+    try {
+      const res = await fetch(`${BACKEND_URL}/users/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, message })
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(()=>({}));
+        throw new Error(data.error || 'Versturen mislukt.');
+      }
+      setStatus({ type: 'success', msg: 'Bericht verstuurd. We nemen snel contact op.' });
+      setMessage('');
+    } catch (err: any) {
+      setStatus({ type: 'error', msg: err.message || 'Er ging iets mis.' });
+    }
   };
 
   return (
@@ -42,6 +55,18 @@ export default function ContactPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-2">
+            <label htmlFor="name" className="text-sm font-medium text-gray-700">Naam</label>
+            <input
+              id="name"
+              type="text"
+              required
+              placeholder="Je naam"
+              className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={name}
+              onChange={e => setName(e.target.value)}
+            />
+          </div>
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm font-medium text-gray-700">Jouw e-mailadres</label>
             <input
