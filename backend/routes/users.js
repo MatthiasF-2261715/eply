@@ -144,60 +144,101 @@ router.post('/ai/reply', isAuthenticated, async function (req, res) {
     }
 });
 
-router.post('/contact', async (req, res) => {
-    try {
-        const { name, email, message } = req.body || {};
-        if (!name || !email || !message) {
-            return res.status(400).json({ error: 'Naam, e-mail en bericht zijn verplicht.' });
-        }
-
-        // simpele sanity checks
-        if (name.length > 150 || email.length > 200 || message.length > 5000) {
-            return res.status(400).json({ error: 'Input te lang.' });
-        }
-
-        const FROM = process.env.CONTACT_FROM;
-        const TO = process.env.CONTACT_TO;
-
+async function buildTransport() {
+    const host = process.env.SMTP_HOST;
+    const user = process.env.SMTP_USER;
+    const pass = process.env.SMTP_PASS;
+    const initialPort = Number(process.env.SMTP_PORT || 587);
+  
+    if (!host || !user || !pass) throw new Error('SMTP configuratie mist (HOST/USER/PASS).');
+  
+    // Candidate poorten (uniek + gefilterd)
+    const candidates = Array.from(new Set(
+      [initialPort, 587, 465].filter(p => [25, 465, 587].includes(p))
+    ));
+  
+    let lastErr;
+    for (const port of candidates) {
+      const secure = port === 465;
+      try {
         const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: Number(process.env.SMTP_PORT || 587),
-            secure: Number(process.env.SMTP_PORT) === 465,
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS
-            }
+          host,
+          port,
+          secure,
+          auth: { user, pass },
+          connectionTimeout: 8000,
+          greetingTimeout: 6000,
+          socketTimeout: 15000,
+          family: 4 // forceer IPv4
         });
-
-        const subject = `Contactformulier: ${name}`;
-        const text =
-    `Nieuw contactformulier bericht:
-
-    Naam: ${name}
-    Email: ${email}
-
-    Bericht:
-    ${message}`;
-
-        const html = `<h3>Nieuw contactformulier bericht</h3>
-    <p><strong>Naam:</strong> ${name}</p>
-    <p><strong>Email:</strong> ${email}</p>
-    <p><strong>Bericht:</strong><br>${message.replace(/\n/g,'<br/>')}</p>`;
-
-        await transporter.sendMail({
-            from: FROM,
-            to: TO,
-            replyTo: email,
-            subject,
-            text,
-            html
-        });
-
-        return res.json({ ok: true });
-        } catch (e) {
-        console.error('Contact route error:', e);
-        return res.status(500).json({ error: 'Server fout bij versturen.' });
-        }
-});
+        await transporter.verify();
+        return { transporter, portUsed: port };
+      } catch (e) {
+        lastErr = e;
+        console.error(`SMTP verify failed op poort ${port}:`, e.message);
+      }
+    }
+    throw new Error(`SMTP verbinding mislukt (geprobeerd poorten: ${candidates.join(', ')}). Laatste fout: ${lastErr?.message}`);
+  }
+  
+  router.post('/contact', async (req, res) => {
+    try {
+      const { name, email, message } = req.body || {};
+      if (!name || !email || !message) return res.status(400).json({ error: 'Naam, e-mail en bericht zijn verplicht.' });
+      if (name.length > 150 || email.length > 200 || message.length > 5000) return res.status(400).json({ error: 'Input te lang.' });
+  
+      const FROM = process.env.CONTACT_FROM || process.env.CONTACT_FROM_TO || process.env.SMTP_USER;
+      const TO   = process.env.CONTACT_TO   || process.env.CONTACT_FROM_TO || FROM;
+  
+      if (!FROM || !TO) return res.status(500).json({ error: 'CONTACT_FROM/TO niet ingesteld.' });
+  
+      let transporter, portUsed;
+      try {
+        ({ transporter, portUsed } = await buildTransport());
+      } catch (e) {
+        return res.status(502).json({ error: e.message });
+      }
+  
+      const esc = s => String(s)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#39;');
+  
+      const subject = `Contactformulier: ${name}`;
+      const text = `Nieuw contactformulier bericht:
+  
+  Naam: ${name}
+  Email: ${email}
+  
+  Bericht:
+  ${message}`;
+  
+      const html = `<h3>Nieuw contactformulier bericht</h3>
+  <p><strong>Naam:</strong> ${esc(name)}</p>
+  <p><strong>Email:</strong> ${esc(email)}</p>
+  <p><strong>Bericht:</strong><br>${esc(message).replace(/\n/g,'<br/>')}</p>
+  <hr style="margin-top:16px;border:none;border-top:1px solid #ddd"/>
+  <small>Verzonden via contactformulier (SMTP poort ${portUsed})</small>`;
+  
+      await transporter.sendMail({
+        from: FROM,
+        to: TO,
+        replyTo: email,
+        subject,
+        text,
+        html
+      });
+  
+      return res.json({ ok: true });
+    } catch (e) {
+      console.error('Contact route error:', e);
+      if (e.code === 'ETIMEDOUT') {
+        return res.status(504).json({ error: 'Timeout richting SMTP server. Poort geblokkeerd of host onbereikbaar.' });
+      }
+      return res.status(500).json({ error: e.message || 'Server fout bij versturen.' });
+    }
+  });
 
 module.exports = router;
