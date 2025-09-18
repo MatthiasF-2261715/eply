@@ -149,10 +149,10 @@ async function buildTransport() {
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
   const port = process.env.SMTP_PORT;
+  const secure = false;
 
   if (!host || !user || !pass) throw new Error('SMTP configuratie mist (HOST/USER/PASS).');
 
-  const secure = port === 465;
   let lastErr;
   try {
     const transporter = nodemailer.createTransport({
