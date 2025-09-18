@@ -149,7 +149,7 @@ async function buildTransport() {
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
   const port = process.env.SMTP_PORT;
-  const secure = false;
+  const secure = true;
 
   if (!host || !user || !pass) throw new Error('SMTP configuratie mist (HOST/USER/PASS).');
 
@@ -165,7 +165,10 @@ async function buildTransport() {
       auth: { user, pass },
       connectionTimeout: 20000,
       greetingTimeout: 15000,
-      socketTimeout: 30000
+      socketTimeout: 30000,
+      tls: {
+        rejectUnauthorized: false
+      }
     });
     await transporter.verify();
     return { transporter };
