@@ -149,7 +149,7 @@ async function buildTransport() {
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
   const port = process.env.SMTP_PORT;
-  const secure = true;
+  const secure = false;
 
   if (!host || !user || !pass) throw new Error('SMTP configuratie mist (HOST/USER/PASS).');
 
