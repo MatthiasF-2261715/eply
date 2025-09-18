@@ -142,43 +142,6 @@ router.post('/ai/reply', isAuthenticated, async function (req, res) {
         res.status(500).json({ error: err.message || 'AI response error' });
     }
 });
-  
-router.post('/contact', async (req, res) => {
-  try {
-    const { name, email, message } = req.body || {};
-    if (!name || !email || !message) return res.status(400).json({ error: 'Naam, e-mail en bericht zijn verplicht.' });
-    if (name.length > 150 || email.length > 200 || message.length > 5000) return res.status(400).json({ error: 'Input te lang.' });
 
-    // FormSubmit endpoint, bv. https://formsubmit.co/info@eply.be
-    const formSubmitUrl = `https://formsubmit.co/${process.env.CONTACT_FROM_TO}`;
-
-    // Bouw het formulier als x-www-form-urlencoded
-    const params = new URLSearchParams();
-    params.append('name', name);
-    params.append('email', email);
-    params.append('message', message);
-
-    // Optioneel: extra FormSubmit opties
-    params.append('_replyto', email);
-    params.append('_subject', `Contactformulier: ${name}`);
-    params.append('_template', 'table'); // of 'box', 'table', 'basic'
-
-    const response = await fetch(formSubmitUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: params.toString(),
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`FormSubmit error: ${text}`);
-    }
-
-    return res.json({ ok: true });
-  } catch (e) {
-    console.error('Contact route error:', e);
-    return res.status(500).json({ error: e.message || 'Server fout bij versturen.' });
-  }
-});
 
 module.exports = router;

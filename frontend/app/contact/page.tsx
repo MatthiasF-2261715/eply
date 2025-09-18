@@ -1,17 +1,16 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 
 const INFO_EMAIL = 'info@eply.be';
 
 export default function ContactPage() {
-  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
   const [email, setEmail] = useState('');
   const [name, setName] = useState(''); // nieuw
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState<{ type: 'idle' | 'loading' | 'success' | 'error'; msg?: string }>({ type: 'idle' });
+
+  const FORM_SUBMIT_URL = 'https://formsubmit.co/info@eply.be'; // of uit env
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,18 +19,31 @@ export default function ContactPage() {
       return;
     }
     setStatus({ type: 'loading' });
+
     try {
-      const res = await fetch(`${BACKEND_URL}/users/contact`, {
+      const params = new URLSearchParams();
+      params.append('name', name);
+      params.append('email', email);
+      params.append('message', message);
+      params.append('_replyto', email);
+      params.append('_subject', `Contactformulier: ${name}`);
+      params.append('_template', 'table');
+
+      const res = await fetch(FORM_SUBMIT_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, message })
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString(),
       });
+
       if (!res.ok) {
-        const data = await res.json().catch(()=>({}));
-        throw new Error(data.error || 'Versturen mislukt.');
+        const text = await res.text();
+        throw new Error(text || 'Versturen mislukt.');
       }
+
       setStatus({ type: 'success', msg: 'Bericht verstuurd. We nemen snel contact op.' });
       setMessage('');
+      setName('');
+      setEmail('');
     } catch (err: any) {
       setStatus({ type: 'error', msg: err.message || 'Er ging iets mis.' });
     }
