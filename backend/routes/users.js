@@ -145,11 +145,14 @@ router.post('/ai/reply', isAuthenticated, async function (req, res) {
 });
 
 async function buildTransport() {
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.GMAIL_USER, // bv. jouwgmail@gmail.com
-      pass: process.env.GMAIL_PASS  // je app-wachtwoord
+    const transporter = nodemailer.createTransport({
+      service: "Gmail",
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_PASS
     }
   });
   await transporter.verify();
@@ -175,30 +178,38 @@ async function buildTransport() {
         .replace(/>/g,'&gt;')
         .replace(/"/g,'&quot;')
         .replace(/'/g,'&#39;');
-  
+
       const subject = `Contactformulier: ${name}`;
       const text = `Nieuw contactformulier bericht:
-  
-  Naam: ${name}
-  Email: ${email}
-  
-  Bericht:
-  ${message}`;
-  
+
+    Naam: ${name}
+    Email: ${email}
+
+    Bericht:
+    ${message}`;
+
       const html = `<h3>Nieuw contactformulier bericht</h3>
-  <p><strong>Naam:</strong> ${esc(name)}</p>
-  <p><strong>Email:</strong> ${esc(email)}</p>
-  <p><strong>Bericht:</strong><br>${esc(message).replace(/\n/g,'<br/>')}</p>
-  <hr style="margin-top:16px;border:none;border-top:1px solid #ddd"/>
-  <small>Verzonden via contactformulier</small>`;
-  
-      await transporter.sendMail({
+    <p><strong>Naam:</strong> ${esc(name)}</p>
+    <p><strong>Email:</strong> ${esc(email)}</p>
+    <p><strong>Bericht:</strong><br>${esc(message).replace(/\n/g,'<br/>')}</p>
+    <hr style="margin-top:16px;border:none;border-top:1px solid #ddd"/>
+    <small>Verzonden via contactformulier</small>`;
+
+      const mailOptions = {
         from: process.env.GMAIL_USER,
         to: process.env.CONTACT_FROM_TO, // info@eply.be
         replyTo: email,
         subject,
         text,
         html
+      };
+
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error("Error sending email: ", error);
+        } else {
+          console.log("Email sent: ", info.response);
+        }
       });
   
       return res.json({ ok: true });
