@@ -145,41 +145,33 @@ router.post('/ai/reply', isAuthenticated, async function (req, res) {
 });
 
 async function buildTransport() {
-    const host = process.env.SMTP_HOST;
-    const user = process.env.SMTP_USER;
-    const pass = process.env.SMTP_PASS;
-    const initialPort = Number(process.env.SMTP_PORT || 587);
-  
-    if (!host || !user || !pass) throw new Error('SMTP configuratie mist (HOST/USER/PASS).');
-  
-    // Candidate poorten (uniek + gefilterd)
-    const candidates = Array.from(new Set(
-      [initialPort, 587, 465].filter(p => [25, 465, 587].includes(p))
-    ));
-  
-    let lastErr;
-    for (const port of candidates) {
-      const secure = port === 465;
-      try {
-        const transporter = nodemailer.createTransport({
-          host,
-          port,
-          secure,
-          auth: { user, pass },
-          connectionTimeout: 8000,
-          greetingTimeout: 6000,
-          socketTimeout: 15000,
-          family: 4 // forceer IPv4
-        });
-        await transporter.verify();
-        return { transporter, portUsed: port };
-      } catch (e) {
-        lastErr = e;
-        console.error(`SMTP verify failed op poort ${port}:`, e.message);
-      }
-    }
-    throw new Error(`SMTP verbinding mislukt (geprobeerd poorten: ${candidates.join(', ')}). Laatste fout: ${lastErr?.message}`);
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  const port = process.env.SMTP_PORT;
+
+  if (!host || !user || !pass) throw new Error('SMTP configuratie mist (HOST/USER/PASS).');
+
+  const secure = port === 465;
+  let lastErr;
+  try {
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure,
+      auth: { user, pass },
+      connectionTimeout: 8000,
+      greetingTimeout: 6000,
+      socketTimeout: 15000
+    });
+    await transporter.verify();
+    return { transporter };
+  } catch (e) {
+    lastErr = e;
+    console.error(`SMTP verify failed op poort ${port}:`, e.message);
   }
+  throw new Error(`SMTP verbinding mislukt op poort ${port}. Laatste fout: ${lastErr?.message}`);
+}
   
   router.post('/contact', async (req, res) => {
     try {
@@ -187,14 +179,9 @@ async function buildTransport() {
       if (!name || !email || !message) return res.status(400).json({ error: 'Naam, e-mail en bericht zijn verplicht.' });
       if (name.length > 150 || email.length > 200 || message.length > 5000) return res.status(400).json({ error: 'Input te lang.' });
   
-      const FROM = process.env.CONTACT_FROM || process.env.CONTACT_FROM_TO || process.env.SMTP_USER;
-      const TO   = process.env.CONTACT_TO   || process.env.CONTACT_FROM_TO || FROM;
-  
-      if (!FROM || !TO) return res.status(500).json({ error: 'CONTACT_FROM/TO niet ingesteld.' });
-  
-      let transporter, portUsed;
+      let transporter;
       try {
-        ({ transporter, portUsed } = await buildTransport());
+        ({ transporter } = await buildTransport());
       } catch (e) {
         return res.status(502).json({ error: e.message });
       }
@@ -220,11 +207,11 @@ async function buildTransport() {
   <p><strong>Email:</strong> ${esc(email)}</p>
   <p><strong>Bericht:</strong><br>${esc(message).replace(/\n/g,'<br/>')}</p>
   <hr style="margin-top:16px;border:none;border-top:1px solid #ddd"/>
-  <small>Verzonden via contactformulier (SMTP poort ${portUsed})</small>`;
+  <small>Verzonden via contactformulier</small>`;
   
       await transporter.sendMail({
-        from: FROM,
-        to: TO,
+        from: process.env.CONTACT_FROM_TO,
+        to: process.env.CONTACT_FROM_TO,
         replyTo: email,
         subject,
         text,
