@@ -7,7 +7,6 @@ const { createImapDraft, createOutlookDraft } = require('../services/draftServic
 const { getAssistantByEmail, isUserWhitelisted } = require('../database');
 const { useAssistant } = require('../assistant');
 const { extractEmail } = require('../utils/emailTransform');
-const fetch = require('node-fetch');
 
 router.get('/id', isAuthenticated, async (req, res) => {
     res.render('id', { idTokenClaims: req.session.account?.idTokenClaims });
