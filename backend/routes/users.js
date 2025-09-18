@@ -145,38 +145,15 @@ router.post('/ai/reply', isAuthenticated, async function (req, res) {
 });
 
 async function buildTransport() {
-  const host = process.env.SMTP_HOST;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  const port = process.env.SMTP_PORT;
-  const secure = false;
-
-  if (!host || !user || !pass) throw new Error('SMTP configuratie mist (HOST/USER/PASS).');
-
-  let lastErr;
-
-  console.log('SMTP createTransport config:', { host, port, pass, secure, user });
-
-  try {
-    const transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure,
-      auth: { user, pass },
-      connectionTimeout: 20000,
-      greetingTimeout: 15000,
-      socketTimeout: 30000,
-      tls: {
-        rejectUnauthorized: false
-      }
-    });
-    await transporter.verify();
-    return { transporter };
-  } catch (e) {
-    lastErr = e;
-    console.error(`SMTP verify failed op poort ${port}:`, e.message);
-  }
-  throw new Error(`SMTP verbinding mislukt op poort ${port}. Laatste fout: ${lastErr?.message}`);
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.GMAIL_USER, // bv. jouwgmail@gmail.com
+      pass: process.env.GMAIL_PASS  // je app-wachtwoord
+    }
+  });
+  await transporter.verify();
+  return { transporter };
 }
   
   router.post('/contact', async (req, res) => {
@@ -216,8 +193,8 @@ async function buildTransport() {
   <small>Verzonden via contactformulier</small>`;
   
       await transporter.sendMail({
-        from: process.env.CONTACT_FROM_TO,
-        to: process.env.CONTACT_FROM_TO,
+        from: process.env.GMAIL_USER,
+        to: process.env.CONTACT_FROM_TO, // info@eply.be
         replyTo: email,
         subject,
         text,
