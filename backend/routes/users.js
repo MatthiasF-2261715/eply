@@ -163,9 +163,9 @@ async function buildTransport() {
       port,
       secure,
       auth: { user, pass },
-      connectionTimeout: 8000,
-      greetingTimeout: 6000,
-      socketTimeout: 15000
+      connectionTimeout: 20000,
+      greetingTimeout: 15000,
+      socketTimeout: 30000
     });
     await transporter.verify();
     return { transporter };
