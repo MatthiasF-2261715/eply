@@ -7,7 +7,7 @@ const { createImapDraft, createOutlookDraft } = require('../services/draftServic
 const { getAssistantByEmail, isUserWhitelisted } = require('../database');
 const { useAssistant } = require('../assistant');
 const { extractEmail } = require('../utils/emailTransform');
-const nodemailer = require('nodemailer');
+const fetch = require('../fetch');
 
 router.get('/id', isAuthenticated, async (req, res) => {
     res.render('id', { idTokenClaims: req.session.account?.idTokenClaims });
@@ -143,83 +143,43 @@ router.post('/ai/reply', isAuthenticated, async function (req, res) {
         res.status(500).json({ error: err.message || 'AI response error' });
     }
 });
+  
+router.post('/contact', async (req, res) => {
+  try {
+    const { name, email, message } = req.body || {};
+    if (!name || !email || !message) return res.status(400).json({ error: 'Naam, e-mail en bericht zijn verplicht.' });
+    if (name.length > 150 || email.length > 200 || message.length > 5000) return res.status(400).json({ error: 'Input te lang.' });
 
-async function buildTransport() {
-    const transporter = nodemailer.createTransport({
-      service: "Gmail",
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_PASS
+    // FormSubmit endpoint, bv. https://formsubmit.co/info@eply.be
+    const formSubmitUrl = `https://formsubmit.co/${process.env.CONTACT_FROM_TO}`;
+
+    // Bouw het formulier als x-www-form-urlencoded
+    const params = new URLSearchParams();
+    params.append('name', name);
+    params.append('email', email);
+    params.append('message', message);
+
+    // Optioneel: extra FormSubmit opties
+    params.append('_replyto', email);
+    params.append('_subject', `Contactformulier: ${name}`);
+    params.append('_template', 'table'); // of 'box', 'table', 'basic'
+
+    const response = await fetch(formSubmitUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`FormSubmit error: ${text}`);
     }
-  });
-  await transporter.verify();
-  return { transporter };
-}
-  
-  router.post('/contact', async (req, res) => {
-    try {
-      const { name, email, message } = req.body || {};
-      if (!name || !email || !message) return res.status(400).json({ error: 'Naam, e-mail en bericht zijn verplicht.' });
-      if (name.length > 150 || email.length > 200 || message.length > 5000) return res.status(400).json({ error: 'Input te lang.' });
-  
-      let transporter;
-      try {
-        ({ transporter } = await buildTransport());
-      } catch (e) {
-        return res.status(502).json({ error: e.message });
-      }
-  
-      const esc = s => String(s)
-        .replace(/&/g,'&amp;')
-        .replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;')
-        .replace(/"/g,'&quot;')
-        .replace(/'/g,'&#39;');
 
-      const subject = `Contactformulier: ${name}`;
-      const text = `Nieuw contactformulier bericht:
-
-    Naam: ${name}
-    Email: ${email}
-
-    Bericht:
-    ${message}`;
-
-      const html = `<h3>Nieuw contactformulier bericht</h3>
-    <p><strong>Naam:</strong> ${esc(name)}</p>
-    <p><strong>Email:</strong> ${esc(email)}</p>
-    <p><strong>Bericht:</strong><br>${esc(message).replace(/\n/g,'<br/>')}</p>
-    <hr style="margin-top:16px;border:none;border-top:1px solid #ddd"/>
-    <small>Verzonden via contactformulier</small>`;
-
-      const mailOptions = {
-        from: process.env.GMAIL_USER,
-        to: process.env.CONTACT_FROM_TO, // info@eply.be
-        replyTo: email,
-        subject,
-        text,
-        html
-      };
-
-      transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          console.error("Error sending email: ", error);
-        } else {
-          console.log("Email sent: ", info.response);
-        }
-      });
-  
-      return res.json({ ok: true });
-    } catch (e) {
-      console.error('Contact route error:', e);
-      if (e.code === 'ETIMEDOUT') {
-        return res.status(504).json({ error: 'Timeout richting SMTP server. Poort geblokkeerd of host onbereikbaar.' });
-      }
-      return res.status(500).json({ error: e.message || 'Server fout bij versturen.' });
-    }
-  });
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('Contact route error:', e);
+    return res.status(500).json({ error: e.message || 'Server fout bij versturen.' });
+  }
+});
 
 module.exports = router;
