@@ -154,6 +154,9 @@ async function buildTransport() {
   if (!host || !user || !pass) throw new Error('SMTP configuratie mist (HOST/USER/PASS).');
 
   let lastErr;
+
+  console.log('SMTP createTransport config:', { host, port, pass, secure, user });
+
   try {
     const transporter = nodemailer.createTransport({
       host,
