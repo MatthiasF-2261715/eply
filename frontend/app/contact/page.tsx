@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 
 const INFO_EMAIL = 'info@eply.be';
 
-const WEB3FORMS_ACCESS_KEY = process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY;
+const WEB3FORMS_ACCESS_KEY = process.env.WEB3FORMS_ACCESS_KEY;
 const WEB3FORMS_URL = 'https://api.web3forms.com/submit';
 
 export default function ContactPage() {
@@ -22,6 +22,7 @@ export default function ContactPage() {
     setStatus({ type: 'loading' });
 
     try {
+      console.log('Submitting form with:', { name, email, message, WEB3FORMS_ACCESS_KEY });
       const formData = new FormData();
       formData.append('access_key', WEB3FORMS_ACCESS_KEY || '');
       formData.append('name', name);
