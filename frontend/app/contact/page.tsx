@@ -6,7 +6,7 @@ const INFO_EMAIL = 'info@eply.be';
 
 export default function ContactPage() {
   const [email, setEmail] = useState('');
-  const [name, setName] = useState(''); // nieuw
+  const [name, setName] = useState(''); 
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState<{ type: 'idle' | 'loading' | 'success' | 'error'; msg?: string }>({ type: 'idle' });
 
@@ -25,9 +25,6 @@ export default function ContactPage() {
       params.append('name', name);
       params.append('email', email);
       params.append('message', message);
-      params.append('_replyto', email);
-      params.append('_subject', `Contactformulier: ${name}`);
-      params.append('_template', 'table');
 
       const res = await fetch(FORM_SUBMIT_URL, {
         method: 'POST',
