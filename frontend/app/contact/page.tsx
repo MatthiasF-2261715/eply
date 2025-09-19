@@ -4,8 +4,8 @@ import React, { useState } from 'react';
 
 const INFO_EMAIL = 'info@eply.be';
 
-const FORM_SUBMIT_ID = process.env.NEXT_PUBLIC_FORM_SUBMIT_ID;
-const FORM_SUBMIT_URL = `https://formsubmit.co/${FORM_SUBMIT_ID}`;
+const WEB3FORMS_ACCESS_KEY = process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY;
+const WEB3FORMS_URL = 'https://api.web3forms.com/submit';
 
 export default function ContactPage() {
   const [email, setEmail] = useState('');
@@ -23,19 +23,22 @@ export default function ContactPage() {
 
     try {
       const params = new URLSearchParams();
+      params.append('access_key', WEB3FORMS_ACCESS_KEY || '');
       params.append('name', name);
       params.append('email', email);
       params.append('message', message);
+      params.append('botcheck', ''); // honeypot
 
-      const res = await fetch(FORM_SUBMIT_URL, {
+      const res = await fetch(WEB3FORMS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: params.toString(),
       });
 
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || 'Versturen mislukt.');
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Versturen mislukt.');
       }
 
       setStatus({ type: 'success', msg: 'Bericht verstuurd. We nemen snel contact op.' });
@@ -65,6 +68,9 @@ export default function ContactPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          <input type="hidden" name="access_key" value={WEB3FORMS_ACCESS_KEY || ''} />
+          <input type="checkbox" name="botcheck" className="hidden" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
+
           <div className="space-y-2">
             <label htmlFor="name" className="text-sm font-medium text-gray-700">Naam</label>
             <input
@@ -75,6 +81,7 @@ export default function ContactPage() {
               className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={name}
               onChange={e => setName(e.target.value)}
+              name="name"
             />
           </div>
           <div className="space-y-2">
@@ -87,6 +94,7 @@ export default function ContactPage() {
               className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={email}
               onChange={e => setEmail(e.target.value)}
+              name="email"
             />
           </div>
 
@@ -100,6 +108,7 @@ export default function ContactPage() {
               className="w-full resize-y rounded-md border border-gray-300 bg-white px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={message}
               onChange={e => setMessage(e.target.value)}
+              name="message"
             />
           </div>
 
