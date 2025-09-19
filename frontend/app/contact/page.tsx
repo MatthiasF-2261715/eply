@@ -4,13 +4,14 @@ import React, { useState } from 'react';
 
 const INFO_EMAIL = 'info@eply.be';
 
+const FORM_SUBMIT_ID = process.env.NEXT_PUBLIC_FORM_SUBMIT_ID;
+const FORM_SUBMIT_URL = `https://formsubmit.co/${FORM_SUBMIT_ID}`;
+
 export default function ContactPage() {
   const [email, setEmail] = useState('');
   const [name, setName] = useState(''); 
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState<{ type: 'idle' | 'loading' | 'success' | 'error'; msg?: string }>({ type: 'idle' });
-
-  const FORM_SUBMIT_URL = 'https://formsubmit.co/info@eply.be'; // of uit env
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
