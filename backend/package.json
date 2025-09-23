@@ -13,6 +13,7 @@
     "html-to-text": "^9.0.5",
     "imap": "^0.8.19",
     "isomorphic-fetch": "^3.0.0",
+    "mailparser": "^3.7.4",
     "morgan": "^1.10.0",
     "nodemailer": "^7.0.6",
     "openai": "^5.9.2",
