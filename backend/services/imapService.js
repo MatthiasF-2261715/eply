@@ -165,149 +165,42 @@ function fetchEmails(imap, box, resolve, reject) {
     const range = `${start}:${total}`;
 
     const f = imap.seq.fetch(range, {
-        bodies: 'HEADER.FIELDS (FROM TO SUBJECT DATE)',
+        bodies: ['HEADER.FIELDS (FROM TO SUBJECT DATE)', 'TEXT'],
         struct: true
     });
 
     f.on('message', (msg) => {
-        let mail = { header: null, structure: null };
+        let mail = { header: null, body: '' };
 
         msg.on('body', (stream, info) => {
             let buffer = '';
             stream.on('data', (chunk) => buffer += chunk.toString('utf8'));
             stream.on('end', () => {
-                mail.header = Imap.parseHeader(buffer);
+                if (info.which === 'TEXT') {
+                    mail.body = buffer;
+                } else {
+                    mail.header = Imap.parseHeader(buffer);
+                }
             });
         });
 
         msg.once('attributes', (attrs) => {
             mail.attrs = attrs;
-            mail.structure = attrs.struct;
         });
 
         msg.once('end', () => {
-            // Fetch the actual body based on structure
-            fetchMessageBody(imap, attrs.uid, mail.structure)
-                .then(body => {
-                    const transformedMail = transformMail({ ...mail, content: body }, 'imap');
-                    mails.push(transformedMail);
-                })
-                .catch(err => {
-                    console.error('Error fetching message body:', err);
-                    const transformedMail = transformMail({ ...mail, content: '' }, 'imap');
-                    mails.push(transformedMail);
-                });
+            const transformedMail = transformMail({ ...mail, content: mail.body }, 'imap');
+            mails.push(transformedMail);
         });
     });
-
-    let processedCount = 0;
-    const expectedCount = Math.min(10, total);
 
     f.once('error', (err) => {
         reject(new Error(`Fetch error: ${err.message}`));
     });
 
     f.once('end', () => {
-        // Wait for all bodies to be processed
-        const checkComplete = () => {
-            if (mails.length >= expectedCount) {
-                resolve(mails.reverse());
-            } else {
-                setTimeout(checkComplete, 100);
-            }
-        };
-        checkComplete();
+        resolve(mails.reverse());
     });
-}
-
-function fetchMessageBody(imap, uid, structure) {
-    return new Promise((resolve, reject) => {
-        // Find the best text part
-        const textPart = findTextPart(structure);
-        if (!textPart) {
-            resolve('');
-            return;
-        }
-
-        const f = imap.fetch(uid, {
-            bodies: textPart.partID || '1'
-        });
-
-        let body = '';
-        f.on('message', (msg) => {
-            msg.on('body', (stream) => {
-                let buffer = '';
-                stream.on('data', (chunk) => buffer += chunk.toString('utf8'));
-                stream.on('end', () => {
-                    body = decodeBody(buffer, textPart.encoding);
-                });
-            });
-        });
-
-        f.once('error', reject);
-        f.once('end', () => resolve(body));
-    });
-}
-
-function findTextPart(struct, partID = '') {
-    if (!struct || !Array.isArray(struct)) return null;
-
-    for (let i = 0; i < struct.length; i++) {
-        const part = struct[i];
-        const currentPartID = partID ? `${partID}.${i + 1}` : `${i + 1}`;
-
-        if (part.type === 'text' && part.subtype === 'plain') {
-            return { ...part, partID: currentPartID };
-        }
-
-        if (part.type === 'text' && part.subtype === 'html') {
-            return { ...part, partID: currentPartID };
-        }
-
-        // Check nested parts
-        if (Array.isArray(part)) {
-            const nested = findTextPart(part, currentPartID);
-            if (nested) return nested;
-        }
-    }
-
-    return null;
-}
-
-function decodeBody(body, encoding) {
-    if (!body) return '';
-
-    try {
-        switch (encoding?.toLowerCase()) {
-            case 'base64':
-                return Buffer.from(body, 'base64').toString('utf8');
-            case 'quoted-printable':
-                return decodeQuotedPrintable(body);
-            default:
-                return body;
-        }
-    } catch (error) {
-        console.error('Error decoding body:', error);
-        return body;
-    }
-}
-
-function isLikelyBase64(str) {
-    if (!str || str.length < 50) return false;
-    
-    // Base64 pattern check
-    const base64Regex = /^[A-Za-z0-9+/\r\n]+={0,2}$/;
-    const cleanStr = str.replace(/\r\n/g, '').replace(/\s/g, '');
-    
-    return base64Regex.test(cleanStr) && cleanStr.length > 100;
-}
-
-function decodeQuotedPrintable(str) {
-    return str
-        .replace(/=\r?\n/g, '') // Remove soft line breaks
-        .replace(/=([0-9A-F]{2})/g, (match, hex) => {
-            return String.fromCharCode(parseInt(hex, 16));
-        });
 }
 
 // Cleanup function to close all connections
