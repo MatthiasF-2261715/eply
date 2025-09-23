@@ -1,4 +1,5 @@
 const Imap = require('imap');
+const { simpleParser } = require('mailparser');
 const { transformMail } = require('../utils/emailTransform');
 
 // Connection pool to reuse IMAP connections
@@ -29,11 +30,11 @@ function setupImap(imapConfig) {
 async function getImapConnection(imapConfig) {
     const connectionKey = getConnectionKey(imapConfig);
     let connection = connectionPool.get(connectionKey);
-    
+
     if (connection && connection.state === 'authenticated') {
         return connection;
     }
-    
+
     // Clean up old connection if exists
     if (connection) {
         try {
@@ -43,7 +44,7 @@ async function getImapConnection(imapConfig) {
         }
         connectionPool.delete(connectionKey);
     }
-    
+
     return new Promise((resolve, reject) => {
         const imap = setupImap(imapConfig);
         let timeoutId = setupTimeout(imap, reject);
@@ -155,42 +156,42 @@ function tryFindSentFolder(imap) {
 function fetchEmails(imap, box, resolve, reject) {
     const mails = [];
     const total = box.messages.total;
-    
+
     if (total === 0) {
         resolve([]);
         return;
     }
-    
+
     const start = Math.max(1, total - 9);
     const range = `${start}:${total}`;
 
-    const f = imap.seq.fetch(range, {
-        bodies: ['HEADER.FIELDS (FROM TO SUBJECT DATE)', 'TEXT'],
-        struct: true
-    });
+    const f = imap.seq.fetch(range, { bodies: '' }); // fetch hele bron (MIME)
 
     f.on('message', (msg) => {
-        let mail = { header: null, body: '' };
+        let buffer = '';
 
-        msg.on('body', (stream, info) => {
-            let buffer = '';
+        msg.on('body', (stream) => {
             stream.on('data', (chunk) => buffer += chunk.toString('utf8'));
-            stream.on('end', () => {
-                if (info.which === 'TEXT') {
-                    mail.body = buffer;
-                } else {
-                    mail.header = Imap.parseHeader(buffer);
-                }
-            });
         });
 
-        msg.once('attributes', (attrs) => {
-            mail.attrs = attrs;
-        });
+        msg.once('end', async () => {
+            try {
+                const parsed = await simpleParser(buffer);
 
-        msg.once('end', () => {
-            const transformedMail = transformMail({ ...mail, content: mail.body }, 'imap');
-            mails.push(transformedMail);
+                const transformedMail = transformMail({
+                    subject: parsed.subject,
+                    from: parsed.from?.text,
+                    to: parsed.to?.text,
+                    date: parsed.date,
+                    text: parsed.text,
+                    html: parsed.html,
+                    attachments: parsed.attachments
+                }, 'imap');
+
+                mails.push(transformedMail);
+            } catch (err) {
+                console.error('Error parsing email:', err);
+            }
         });
     });
 
