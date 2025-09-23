@@ -2,6 +2,7 @@ const Imap = require('imap');
 const { simpleParser } = require('mailparser');
 const { transformMail } = require('../utils/emailTransform');
 
+// Connection pool to reuse IMAP connections
 const connectionPool = new Map();
 
 function getConnectionKey(imapConfig) {
@@ -31,18 +32,18 @@ async function getImapConnection(imapConfig) {
     let connection = connectionPool.get(connectionKey);
 
     if (connection && connection.state === 'authenticated') {
-        console.log(`[IMAP] Reusing connection for ${connectionKey}`);
         return connection;
     }
 
+    // Clean up old connection if exists
     if (connection) {
         try {
             connection.end();
-        } catch (e) {}
+        } catch (e) {
+            // Ignore cleanup errors
+        }
         connectionPool.delete(connectionKey);
     }
-
-    console.log(`[IMAP] Creating new connection for ${connectionKey}`);
 
     return new Promise((resolve, reject) => {
         const imap = setupImap(imapConfig);
@@ -50,7 +51,6 @@ async function getImapConnection(imapConfig) {
 
         imap.once('ready', function () {
             clearTimeout(timeoutId);
-            console.log('[IMAP] Connection ready');
             connectionPool.set(connectionKey, imap);
             resolve(imap);
         });
@@ -86,7 +86,9 @@ function setupTimeout(imap, reject) {
     return setTimeout(() => {
         try {
             imap.end();
-        } catch (e) {}
+        } catch (e) {
+            // Ignore cleanup errors
+        }
         reject(new Error('IMAP connection timeout'));
     }, 30000);
 }
@@ -94,33 +96,33 @@ function setupTimeout(imap, reject) {
 function setupImapListeners(imap, timeoutId, reject, connectionKey) {
     imap.once('error', (err) => {
         clearTimeout(timeoutId);
-        if (connectionKey) connectionPool.delete(connectionKey);
-        console.error('[IMAP] Error event:', err);
+        if (connectionKey) {
+            connectionPool.delete(connectionKey);
+        }
         reject(new Error(`IMAP error: ${err.message}`));
     });
 
     imap.once('end', () => {
         clearTimeout(timeoutId);
-        if (connectionKey) connectionPool.delete(connectionKey);
-        console.log('[IMAP] Connection ended');
+        if (connectionKey) {
+            connectionPool.delete(connectionKey);
+        }
     });
 
     imap.once('close', () => {
-        if (connectionKey) connectionPool.delete(connectionKey);
-        console.log('[IMAP] Connection closed');
+        if (connectionKey) {
+            connectionPool.delete(connectionKey);
+        }
     });
 }
 
 function openInbox(imap) {
     return new Promise((resolve, reject) => {
-        console.log('[IMAP] Opening INBOX...');
         imap.openBox('INBOX', true, (err, box) => {
             if (err) {
-                console.error('[IMAP] Failed to open inbox:', err);
                 reject(new Error('Could not open inbox'));
                 return;
             }
-            console.log(`[IMAP] INBOX opened, total messages: ${box.messages.total}`);
             fetchEmails(imap, box, resolve, reject);
         });
     });
@@ -137,15 +139,12 @@ function tryFindSentFolder(imap) {
                 return;
             }
 
-            console.log(`[IMAP] Trying to open sent folder: ${sentFolders[folderIndex]}`);
             imap.openBox(sentFolders[folderIndex], true, (err, box) => {
                 if (err) {
-                    console.log(`[IMAP] Failed for ${sentFolders[folderIndex]}, trying next...`);
                     folderIndex++;
                     tryNextFolder();
                     return;
                 }
-                console.log(`[IMAP] Sent folder opened: ${sentFolders[folderIndex]}, total messages: ${box.messages.total}`);
                 fetchEmails(imap, box, resolve, reject);
             });
         }
@@ -159,7 +158,6 @@ function fetchEmails(imap, box, resolve, reject) {
     const total = box.messages.total;
 
     if (total === 0) {
-        console.log('[IMAP] No messages in folder');
         resolve([]);
         return;
     }
@@ -167,12 +165,9 @@ function fetchEmails(imap, box, resolve, reject) {
     const start = Math.max(1, total - 9);
     const range = `${start}:${total}`;
 
-    console.log(`[IMAP] Fetching range ${range} of ${total} messages...`);
+    const f = imap.seq.fetch(range, { bodies: '' }); // fetch hele bron (MIME)
 
-    const f = imap.seq.fetch(range, { bodies: '' });
-
-    f.on('message', (msg, seqno) => {
-        console.log(`[IMAP] Processing message #${seqno}`);
+    f.on('message', (msg) => {
         let buffer = '';
 
         msg.on('body', (stream) => {
@@ -180,10 +175,8 @@ function fetchEmails(imap, box, resolve, reject) {
         });
 
         msg.once('end', async () => {
-            console.log(`[IMAP] Finished receiving raw message #${seqno}, size=${buffer.length}`);
             try {
                 const parsed = await simpleParser(buffer);
-                console.log(`[IMAP] Parsed message #${seqno} subject="${parsed.subject}"`);
 
                 const transformedMail = transformMail({
                     subject: parsed.subject,
@@ -197,32 +190,34 @@ function fetchEmails(imap, box, resolve, reject) {
 
                 mails.push(transformedMail);
             } catch (err) {
-                console.error(`[IMAP] Error parsing message #${seqno}:`, err);
+                console.error('Error parsing email:', err);
             }
         });
     });
 
     f.once('error', (err) => {
-        console.error('[IMAP] Fetch error:', err);
         reject(new Error(`Fetch error: ${err.message}`));
     });
 
     f.once('end', () => {
-        console.log(`[IMAP] Fetch complete. Total parsed mails: ${mails.length}`);
+        console.log(mails)
         resolve(mails.reverse());
     });
 }
 
+// Cleanup function to close all connections
 function closeAllConnections() {
-    console.log('[IMAP] Closing all connections...');
     for (const [key, connection] of connectionPool) {
         try {
             connection.end();
-        } catch (e) {}
+        } catch (e) {
+            // Ignore cleanup errors
+        }
     }
     connectionPool.clear();
 }
 
+// Cleanup on process exit
 process.on('SIGINT', closeAllConnections);
 process.on('SIGTERM', closeAllConnections);
 
