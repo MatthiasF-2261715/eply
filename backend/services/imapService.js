@@ -165,25 +165,18 @@ function fetchEmails(imap, box, resolve, reject) {
     const range = `${start}:${total}`;
 
     const f = imap.seq.fetch(range, {
-        bodies: ['HEADER.FIELDS (FROM TO SUBJECT DATE)', 'TEXT', ''],
+        bodies: 'HEADER.FIELDS (FROM TO SUBJECT DATE)',
         struct: true
     });
 
     f.on('message', (msg) => {
-        let mail = { header: null, body: '', rawBody: '', structure: null };
+        let mail = { header: null, structure: null };
 
         msg.on('body', (stream, info) => {
             let buffer = '';
             stream.on('data', (chunk) => buffer += chunk.toString('utf8'));
             stream.on('end', () => {
-                if (info.which === 'TEXT') {
-                    mail.body = buffer;
-                } else if (info.which === '') {
-                    // Full message body
-                    mail.rawBody = buffer;
-                } else {
-                    mail.header = Imap.parseHeader(buffer);
-                }
+                mail.header = Imap.parseHeader(buffer);
             });
         });
 
@@ -193,65 +186,109 @@ function fetchEmails(imap, box, resolve, reject) {
         });
 
         msg.once('end', () => {
-            // Process the email body based on structure
-            const processedBody = processEmailBody(mail);
-            const transformedMail = transformMail({ ...mail, content: processedBody }, 'imap');
-            mails.push(transformedMail);
+            // Fetch the actual body based on structure
+            fetchMessageBody(imap, attrs.uid, mail.structure)
+                .then(body => {
+                    const transformedMail = transformMail({ ...mail, content: body }, 'imap');
+                    mails.push(transformedMail);
+                })
+                .catch(err => {
+                    console.error('Error fetching message body:', err);
+                    const transformedMail = transformMail({ ...mail, content: '' }, 'imap');
+                    mails.push(transformedMail);
+                });
         });
     });
+
+    let processedCount = 0;
+    const expectedCount = Math.min(10, total);
 
     f.once('error', (err) => {
         reject(new Error(`Fetch error: ${err.message}`));
     });
 
     f.once('end', () => {
-        resolve(mails.reverse());
+        // Wait for all bodies to be processed
+        const checkComplete = () => {
+            if (mails.length >= expectedCount) {
+                resolve(mails.reverse());
+            } else {
+                setTimeout(checkComplete, 100);
+            }
+        };
+        checkComplete();
     });
 }
 
-function processEmailBody(mail) {
+function fetchMessageBody(imap, uid, structure) {
+    return new Promise((resolve, reject) => {
+        // Find the best text part
+        const textPart = findTextPart(structure);
+        if (!textPart) {
+            resolve('');
+            return;
+        }
+
+        const f = imap.fetch(uid, {
+            bodies: textPart.partID || '1'
+        });
+
+        let body = '';
+        f.on('message', (msg) => {
+            msg.on('body', (stream) => {
+                let buffer = '';
+                stream.on('data', (chunk) => buffer += chunk.toString('utf8'));
+                stream.on('end', () => {
+                    body = decodeBody(buffer, textPart.encoding);
+                });
+            });
+        });
+
+        f.once('error', reject);
+        f.once('end', () => resolve(body));
+    });
+}
+
+function findTextPart(struct, partID = '') {
+    if (!struct || !Array.isArray(struct)) return null;
+
+    for (let i = 0; i < struct.length; i++) {
+        const part = struct[i];
+        const currentPartID = partID ? `${partID}.${i + 1}` : `${i + 1}`;
+
+        if (part.type === 'text' && part.subtype === 'plain') {
+            return { ...part, partID: currentPartID };
+        }
+
+        if (part.type === 'text' && part.subtype === 'html') {
+            return { ...part, partID: currentPartID };
+        }
+
+        // Check nested parts
+        if (Array.isArray(part)) {
+            const nested = findTextPart(part, currentPartID);
+            if (nested) return nested;
+        }
+    }
+
+    return null;
+}
+
+function decodeBody(body, encoding) {
+    if (!body) return '';
+
     try {
-        // If we have structure info, try to decode properly
-        if (mail.structure && mail.structure.length > 0) {
-            const mainPart = mail.structure[0];
-            
-            // Check if it's base64 encoded
-            if (mainPart.encoding === 'BASE64' || mainPart.encoding === 'base64') {
-                try {
-                    const decoded = Buffer.from(mail.body, 'base64').toString('utf8');
-                    return decoded;
-                } catch (e) {
-                    console.log('Failed to decode base64:', e.message);
-                }
-            }
-            
-            // Check if it's quoted-printable
-            if (mainPart.encoding === 'QUOTED-PRINTABLE' || mainPart.encoding === 'quoted-printable') {
-                try {
-                    return decodeQuotedPrintable(mail.body);
-                } catch (e) {
-                    console.log('Failed to decode quoted-printable:', e.message);
-                }
-            }
+        switch (encoding?.toLowerCase()) {
+            case 'base64':
+                return Buffer.from(body, 'base64').toString('utf8');
+            case 'quoted-printable':
+                return decodeQuotedPrintable(body);
+            default:
+                return body;
         }
-        
-        // If the body looks like base64 (long strings of random characters), try to decode
-        if (mail.body && isLikelyBase64(mail.body)) {
-            try {
-                const decoded = Buffer.from(mail.body, 'base64').toString('utf8');
-                // Check if decoded content makes sense
-                if (decoded.length > 0 && !isLikelyBase64(decoded)) {
-                    return decoded;
-                }
-            } catch (e) {
-                console.log('Auto base64 decode failed:', e.message);
-            }
-        }
-        
-        return mail.body || '';
     } catch (error) {
-        console.error('Error processing email body:', error);
-        return mail.body || '';
+        console.error('Error decoding body:', error);
+        return body;
     }
 }
 
