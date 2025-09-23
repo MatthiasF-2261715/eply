@@ -165,12 +165,12 @@ function fetchEmails(imap, box, resolve, reject) {
     const range = `${start}:${total}`;
 
     const f = imap.seq.fetch(range, {
-        bodies: ['HEADER.FIELDS (FROM TO SUBJECT DATE)', 'TEXT'],
+        bodies: ['HEADER.FIELDS (FROM TO SUBJECT DATE)', 'TEXT', ''],
         struct: true
     });
 
     f.on('message', (msg) => {
-        let mail = { header: null, body: '' };
+        let mail = { header: null, body: '', rawBody: '', structure: null };
 
         msg.on('body', (stream, info) => {
             let buffer = '';
@@ -178,6 +178,9 @@ function fetchEmails(imap, box, resolve, reject) {
             stream.on('end', () => {
                 if (info.which === 'TEXT') {
                     mail.body = buffer;
+                } else if (info.which === '') {
+                    // Full message body
+                    mail.rawBody = buffer;
                 } else {
                     mail.header = Imap.parseHeader(buffer);
                 }
@@ -186,10 +189,13 @@ function fetchEmails(imap, box, resolve, reject) {
 
         msg.once('attributes', (attrs) => {
             mail.attrs = attrs;
+            mail.structure = attrs.struct;
         });
 
         msg.once('end', () => {
-            const transformedMail = transformMail({ ...mail, content: mail.body }, 'imap');
+            // Process the email body based on structure
+            const processedBody = processEmailBody(mail);
+            const transformedMail = transformMail({ ...mail, content: processedBody }, 'imap');
             mails.push(transformedMail);
         });
     });
@@ -201,6 +207,70 @@ function fetchEmails(imap, box, resolve, reject) {
     f.once('end', () => {
         resolve(mails.reverse());
     });
+}
+
+function processEmailBody(mail) {
+    try {
+        // If we have structure info, try to decode properly
+        if (mail.structure && mail.structure.length > 0) {
+            const mainPart = mail.structure[0];
+            
+            // Check if it's base64 encoded
+            if (mainPart.encoding === 'BASE64' || mainPart.encoding === 'base64') {
+                try {
+                    const decoded = Buffer.from(mail.body, 'base64').toString('utf8');
+                    return decoded;
+                } catch (e) {
+                    console.log('Failed to decode base64:', e.message);
+                }
+            }
+            
+            // Check if it's quoted-printable
+            if (mainPart.encoding === 'QUOTED-PRINTABLE' || mainPart.encoding === 'quoted-printable') {
+                try {
+                    return decodeQuotedPrintable(mail.body);
+                } catch (e) {
+                    console.log('Failed to decode quoted-printable:', e.message);
+                }
+            }
+        }
+        
+        // If the body looks like base64 (long strings of random characters), try to decode
+        if (mail.body && isLikelyBase64(mail.body)) {
+            try {
+                const decoded = Buffer.from(mail.body, 'base64').toString('utf8');
+                // Check if decoded content makes sense
+                if (decoded.length > 0 && !isLikelyBase64(decoded)) {
+                    return decoded;
+                }
+            } catch (e) {
+                console.log('Auto base64 decode failed:', e.message);
+            }
+        }
+        
+        return mail.body || '';
+    } catch (error) {
+        console.error('Error processing email body:', error);
+        return mail.body || '';
+    }
+}
+
+function isLikelyBase64(str) {
+    if (!str || str.length < 50) return false;
+    
+    // Base64 pattern check
+    const base64Regex = /^[A-Za-z0-9+/\r\n]+={0,2}$/;
+    const cleanStr = str.replace(/\r\n/g, '').replace(/\s/g, '');
+    
+    return base64Regex.test(cleanStr) && cleanStr.length > 100;
+}
+
+function decodeQuotedPrintable(str) {
+    return str
+        .replace(/=\r?\n/g, '') // Remove soft line breaks
+        .replace(/=([0-9A-F]{2})/g, (match, hex) => {
+            return String.fromCharCode(parseInt(hex, 16));
+        });
 }
 
 // Cleanup function to close all connections
