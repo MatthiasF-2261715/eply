@@ -12,6 +12,7 @@
     "he": "^1.2.0",
     "html-to-text": "^9.0.5",
     "imap": "^0.8.19",
+    "imapflow": "^1.0.196",
     "isomorphic-fetch": "^3.0.0",
     "mailparser": "^3.7.4",
     "morgan": "^1.10.0",
