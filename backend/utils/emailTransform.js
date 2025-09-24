@@ -2,6 +2,7 @@ const { htmlToText } = require('html-to-text');
 const he = require('he');
 
 function transformMail(mail, method) {
+    console.log("In emailTransform, mail:", mail);
     if (method === 'outlook') {
         return {
             id: mail.id,
