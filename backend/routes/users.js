@@ -6,7 +6,6 @@ const { getInboxEmails, getSentEmails } = require('../services/emailService');
 const { createImapDraft, createOutlookDraft } = require('../services/draftService');
 const { getAssistantByEmail, isUserWhitelisted } = require('../database');
 const { useAssistant } = require('../assistant');
-const { extractEmail } = require('../utils/emailTransform');
 
 router.get('/id', isAuthenticated, async (req, res) => {
     res.render('id', { idTokenClaims: req.session.account?.idTokenClaims });
@@ -73,7 +72,7 @@ router.get('/mails', isAuthenticated, async function(req, res, next) {
 });
 
 function getSessionEmail(req) {
-    return req.session.email || req.session?.imap?.email || req.session?.account?.username || null;
+    return req.session.email || req.session?.imap?.email || req.session?.account?.username;
 }
 
 router.get('/isWhitelisted', isAuthenticated, async (req,res) => {
@@ -113,17 +112,16 @@ router.post('/ai/reply', isAuthenticated, async function (req, res) {
     if (!email || !content) {
         return res.status(400).json({ error: 'Email en content zijn verplicht.' });
     }
-    email = extractEmail(content);
     console.log('Extracted email:', content);
     try {
         const sentEmails = await getSentEmails(req.session.method, req.session);
         const assistantObj = await getAssistantByEmail(sessionEmail);
         const assistantId = assistantObj.assistant_id || assistantObj.id;
         
-        const currentEmail = { from: email, title };
+        const currentEmail = { from: content, title };
         const aiResponse = await useAssistant(assistantId, currentEmail, sentEmails);
         
-        console.log('AI response generated successfully');
+        console.log('AI response generated successfully: ', aiResponse);
         
         if (originalMailId) {
             console.log('Creating draft using method:', req.session.method);

@@ -99,9 +99,9 @@ export default function Dashboard() {
 
     console.log('Geselecteerde e-mail voor antwoord:', targetEmail);
 
-    const emailAddress = targetEmail.to;
+    const emailAddress = targetEmail.from;
     const title = targetEmail.subject;
-    const content = targetEmail.text;
+    const content = targetEmail.text || targetEmail.content;
     const originalMailId = targetEmail.id || '';
 
     if (!emailAddress || !title || !content) {
@@ -171,14 +171,12 @@ export default function Dashboard() {
           setEmailsError('Niet ingelogd of sessie verlopen.');
           setEmails([]);
         } else {
-          const data = await res.json();
-          console.log('Fetched emails:', data);
-          const newEmails = Array.isArray(data) ? data : data.mails || [];
-          console.log('Parsed emails:', newEmails);
-          setEmails(newEmails);
+          const mails = await res.json();
+          console.log('Parsed emails:', mails);
+          setEmails(mails);
 
-          if (newEmails.length > 0) {
-            const latestEmail = newEmails[0];
+          if (mails.length > 0) {
+            const latestEmail = mails[0];
             const emailTime = new Date(latestEmail.date).getTime();
             
             // Only generate reply if email is newer than last check AND not processed before

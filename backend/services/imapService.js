@@ -28,7 +28,6 @@ async function getImapConnection(imapConfig) {
     });
 
     await client.connect();
-    console.log(`[IMAP] Connected for ${imapConfig.email}`);
     connectionPool.set(connectionKey, client);
     return client;
 }
@@ -72,7 +71,6 @@ async function getImapSentEmails(imapConfig) {
     for (let folder of sentFolders) {
         try {
             await client.mailboxOpen(folder);
-            console.log(`[IMAP] Sent folder opened: ${folder}`);
 
             const total = client.mailbox.exists;
             if (total === 0) return [];
@@ -107,7 +105,6 @@ async function getImapSentEmails(imapConfig) {
 }
 
 async function closeAllConnections() {
-    console.log('[IMAP] Closing all connections...');
     for (const [key, client] of connectionPool) {
         try {
             await client.logout();
