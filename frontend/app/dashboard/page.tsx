@@ -171,12 +171,12 @@ export default function Dashboard() {
           setEmailsError('Niet ingelogd of sessie verlopen.');
           setEmails([]);
         } else {
-          const mails = await res.json();
-          console.log('Parsed emails:', mails);
-          setEmails(mails);
+          const newEmails = await res.json();
+          console.log('Parsed emails:', newEmails);
+          setEmails(newEmails);
 
-          if (mails.length > 0) {
-            const latestEmail = mails[0];
+          if (newEmails.length > 0) {
+            const latestEmail = newEmails[0];
             const emailTime = new Date(latestEmail.date).getTime();
             
             // Only generate reply if email is newer than last check AND not processed before
