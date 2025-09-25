@@ -172,9 +172,9 @@ export default function Dashboard() {
           setEmails([]);
         } else {
           const data = await res.json();
-          console.log('Parsed emails:', data);
-          
-          const newEmails = Array.isArray(data) ? data : [];
+          console.log('Fetched emails:', data);
+          const newEmails = Array.isArray(data) ? data : data.mails || [];
+          console.log('Parsed emails:', newEmails);
           setEmails(newEmails);
 
           if (newEmails.length > 0) {
