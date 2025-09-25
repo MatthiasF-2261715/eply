@@ -52,7 +52,6 @@ router.post('/imap-login', async (req, res) => {
         connectionAttempts++;
         
         const connectionTimeout = setTimeout(() => {
-            console.log('[IMAP] Connection timeout - ending connection');
             try {
                 imap.end();
             } catch (e) {
@@ -69,7 +68,6 @@ router.post('/imap-login', async (req, res) => {
         }, 20000); // 20 second timeout
 
         imap.once('ready', function() {
-            console.log('[IMAP] Connection ready');
             clearTimeout(connectionTimeout);
             req.session.isAuthenticated = true;
             req.session.imap = { email, password, imapServer, port };
@@ -80,9 +78,6 @@ router.post('/imap-login', async (req, res) => {
                     return res.status(500).json({ error: 'Session save failed' });
                 }
 
-                console.log('Session saved successfully:', req.sessionID);
-                console.log('Session data after save:', req.session);
-                console.log('Response headers:', res.getHeaders());
                 imap.end();
                 res.json({ success: true });
             });
@@ -92,7 +87,6 @@ router.post('/imap-login', async (req, res) => {
             console.error('[IMAP] Error:', err);
             clearTimeout(connectionTimeout);
             if (connectionAttempts < maxAttempts) {
-                console.log(`[IMAP] Retrying connection (${connectionAttempts}/${maxAttempts})`);
                 setTimeout(attemptConnection, 3000); // Increased retry delay
             } else {
                 res.status(401).json({ 
@@ -102,12 +96,10 @@ router.post('/imap-login', async (req, res) => {
         });
 
         imap.once('end', function() {
-            console.log('[IMAP] Connection ended');
             clearTimeout(connectionTimeout);
         });
 
         try {
-            console.log('[IMAP] Attempting to connect...');
             imap.connect();
         } catch (err) {
             console.error('[IMAP] Connection error:', err);
