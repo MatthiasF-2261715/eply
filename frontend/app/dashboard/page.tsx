@@ -171,8 +171,10 @@ export default function Dashboard() {
           setEmailsError('Niet ingelogd of sessie verlopen.');
           setEmails([]);
         } else {
-          const newEmails = await res.json();
-          console.log('Parsed emails:', newEmails);
+          const data = await res.json();
+          console.log('Parsed emails:', data);
+          
+          const newEmails = Array.isArray(data) ? data : [];
           setEmails(newEmails);
 
           if (newEmails.length > 0) {
