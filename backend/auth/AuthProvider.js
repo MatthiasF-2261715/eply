@@ -122,15 +122,7 @@ class AuthProvider {
 
     handleRedirect(options = {}) {
         return async (req, res, next) => {
-            try {
-                console.log('[AUTH] handleRedirect called');
-                console.log('[AUTH] Session ID:', req.sessionID);
-                console.log('[AUTH] Session data:', {
-                    hasAuthCodeRequest: !!req.session.authCodeRequest,
-                    hasPkceCodes: !!req.session.pkceCodes,
-                    method: req.session.method
-                });
-    
+            try {    
                 if (!req.body || !req.body.state) {
                     console.error('[AUTH] Error: response not found in request body');
                     return next(new Error('Error: response not found'));
@@ -152,8 +144,6 @@ class AuthProvider {
                     codeVerifier: req.session.pkceCodes.verifier,
                 };
     
-                console.log('[AUTH] Attempting token acquisition...');
-    
                 const msalInstance = this.getMsalInstance(this.msalConfig);
     
                 if (req.session.tokenCache) {
@@ -167,8 +157,7 @@ class AuthProvider {
                 req.session.account = tokenResponse.account;
                 req.session.isAuthenticated = true;
                 req.session.method = 'outlook';
-    
-                console.log('[AUTH] Token acquisition successful');
+
     
                 // Clear temporary session data
                 delete req.session.authCodeRequest;
@@ -182,7 +171,6 @@ class AuthProvider {
                         console.error('[AUTH] Session save error:', err);
                         return next(err);
                     }
-                    console.log('[AUTH] Redirecting to:', state.successRedirect);
                     res.redirect(state.successRedirect);
                 });
     
