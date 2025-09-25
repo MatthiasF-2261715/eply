@@ -48,6 +48,7 @@ async function getImapInboxEmails(imapConfig) {
     for await (let msg of client.fetch(`${start}:${total}`, { source: true })) {
         try {
             const parsed = await simpleParser(msg.source);
+            console.log("Parsed email: ", parsed);
             mails.push({
                 subject: parsed.subject,
                 from: parsed.from?.text,
