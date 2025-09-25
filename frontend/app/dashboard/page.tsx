@@ -12,12 +12,9 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState<string | null>(null);
   const [emails, setEmails] = useState<any[]>([]);
-  const [emailsLoading, setEmailsLoading] = useState(true);
   const [emailsError, setEmailsError] = useState<string | null>(null);
   const [showReplyPopup, setShowReplyPopup] = useState(false);
   const [currentReply, setCurrentReply] = useState('');
-  const [previousEmailCount, setPreviousEmailCount] = useState(0);
-  const [lastProcessedEmailId, setLastProcessedEmailId] = useState<string | null>(null);
   const [lastCheckTime, setLastCheckTime] = useState<number>(Date.now());
   const isInitialLoad = useRef(true);
   const [processedEmailIds, setProcessedEmailIds] = useState<Set<string>>(new Set());
@@ -161,7 +158,6 @@ export default function Dashboard() {
     let intervalId: NodeJS.Timeout;
 
     const fetchEmails = async () => {
-      setEmailsLoading(true);
       try {
         const res = await fetch(`${BACKEND_URL}/users/mails`, {
           credentials: 'include',
@@ -200,9 +196,7 @@ export default function Dashboard() {
       } catch (error) {
         setEmailsError('Fout bij ophalen van e-mails.');
         setEmails([]);
-      } finally {
-        setEmailsLoading(false);
-      }
+      } 
     };
 
     fetchEmails();
