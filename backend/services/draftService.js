@@ -21,6 +21,7 @@ async function createImapDraft(session, ai_reply, mail_id, { mailbox = 'INBOX', 
         host: imapServer,
         port: parseInt(port, 10),
         tls: true,
+        debug: false,
         tlsOptions: { rejectUnauthorized: false }
     });
 
@@ -175,7 +176,7 @@ async function createImapDraft(session, ai_reply, mail_id, { mailbox = 'INBOX', 
 }
 
 async function createOutlookDraft(session, ai_reply, mail_id) {
-    console.log("ai replY:", ai_reply);
+    console.log("ai reply:", ai_reply);
     if (!session?.accessToken) {
         throw new Error('No access token available');
     }

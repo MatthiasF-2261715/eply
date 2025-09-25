@@ -31,6 +31,7 @@ router.post('/imap-login', async (req, res) => {
         host: imapServer,
         port: parseInt(port, 10),
         tls: true,
+        debug: false,
         tlsOptions: { 
             rejectUnauthorized: false,
             servername: imapServer,
