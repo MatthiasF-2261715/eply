@@ -2,7 +2,6 @@ const { getOutlookSentEmails, getOutlookInboxEmails } = require('./outlookServic
 const { getImapSentEmails, getImapInboxEmails } = require('./imapService');
 
 async function getSentEmails(method, session) {
-    console.log('Fetching sent emails for method:', method);
     if (method === 'outlook') {
         return getOutlookSentEmails(session);
     } else if (method === 'imap') {
@@ -12,7 +11,6 @@ async function getSentEmails(method, session) {
 }
 
 async function getInboxEmails(method, session) {
-    console.log('Fetching inbox emails for method:', method);
     if (method === 'outlook') {
         return getOutlookInboxEmails(session);
     } else if (method === 'imap') {

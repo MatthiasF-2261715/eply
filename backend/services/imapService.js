@@ -24,7 +24,8 @@ async function getImapConnection(imapConfig) {
         auth: {
             user: imapConfig.email,
             pass: imapConfig.password
-        }
+        },
+        logger: false
     });
 
     await client.connect();
