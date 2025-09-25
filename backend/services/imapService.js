@@ -45,11 +45,11 @@ async function getImapInboxEmails(imapConfig) {
     const start = Math.max(1, total - 9);
     const mails = [];
 
-    for await (let msg of client.fetch(`${start}:${total}`, { source: true })) {
+    for await (let msg of client.fetch(`${start}:${total}`, { source: true, uid: true })) {
         try {
             const parsed = await simpleParser(msg.source);
-            console.log("Parsed email: ", parsed);
             mails.push({
+                id: msg.uid,
                 subject: parsed.subject,
                 from: parsed.from?.text,
                 to: parsed.to?.text,
@@ -80,10 +80,11 @@ async function getImapSentEmails(imapConfig) {
             const start = Math.max(1, total - 9);
             const mails = [];
 
-            for await (let msg of client.fetch(`${start}:${total}`, { source: true })) {
+            for await (let msg of client.fetch(`${start}:${total}`, { source: true, uid: true })) {
                 try {
                     const parsed = await simpleParser(msg.source);
                     mails.push({
+                        id: msg.uid,
                         subject: parsed.subject,
                         from: parsed.from?.text,
                         to: parsed.to?.text,
