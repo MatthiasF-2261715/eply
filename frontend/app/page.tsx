@@ -46,7 +46,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen overflow-hidden">
       {/* Hero Section with Animated Background */}
-      <section className="relative bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-20 px-4 overflow-hidden">
+      <section className="relative py-20 px-4 overflow-hidden">
         {/* Animated Background Elements */}
         <div className="absolute inset-0">
           <motion.div
@@ -143,7 +143,7 @@ export default function HomePage() {
       </section>
 
       {/* Hoe Eply werkt - Animated Steps */}
-      <section className="py-20 px-4 bg-white relative">
+      <section className="py-20 px-4 relative">
         <div className="max-w-6xl mx-auto">
           <motion.div 
             className="text-center mb-16"
@@ -214,7 +214,7 @@ export default function HomePage() {
       </section>
 
       {/* Waarom Eply? - Interactive Cards */}
-      <section className="py-20 px-4 bg-gradient-to-br from-gray-50 to-blue-50">
+      <section className="py-20 px-4">
         <div className="max-w-6xl mx-auto">
           <motion.div 
             className="text-center mb-16"
@@ -267,7 +267,7 @@ export default function HomePage() {
       </section>
 
       {/* Social Proof - Animated Testimonials */}
-      <section className="py-20 px-4 bg-white relative overflow-hidden">
+      <section className="py-20 px-4 relative overflow-hidden">
         <div className="max-w-6xl mx-auto">
           <motion.div 
             className="text-center mb-16"
@@ -366,7 +366,7 @@ export default function HomePage() {
 
       {/* Remaining sections with similar animations... */}
       {/* Contact / Demo - Interactive Form */}
-      <section className="py-20 px-4 bg-gradient-to-r from-gray-900 via-blue-900 to-purple-900 text-white relative overflow-hidden">
+      <section className="py-20 px-4 text-white relative overflow-hidden">
         {/* Animated particles background */}
         <div className="absolute inset-0">
           {[...Array(20)].map((_, i) => (
