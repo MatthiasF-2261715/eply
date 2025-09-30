@@ -1,139 +1,306 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { ArrowRight, Mail, Sparkles } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { 
+  Mail, 
+  Brain, 
+  CheckCircle, 
+  Clock, 
+  MessageCircle, 
+  Shield,
+  ArrowRight,
+  Users,
+  Star,
+  Play
+} from "lucide-react"
 
-export function HeroSection() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/profile`, { credentials: 'include' })
-      .then(res => {
-        console.log(res.status);
-        if (res.status === 200) {
-          setIsAuthenticated(true);
-        }
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
-
+export default function HeroSection() {
   return (
-    <div className="relative min-h-screen flex items-center justify-center overflow-hidden pt-8">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-indigo-50" />
-      
-      {/* Animated background elements */}
-      <div className="absolute inset-0">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse" />
-        <div className="absolute top-40 right-20 w-72 h-72 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse delay-1000" />
-        <div className="absolute -bottom-8 left-1/2 w-72 h-72 bg-pink-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse delay-2000" />
-      </div>
+    <div className="min-h-screen">
+      {/* Hero Section */}
+      <section className="bg-gradient-to-br from-blue-50 to-indigo-100 py-20 px-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <h1 className="text-5xl font-bold text-gray-900 mb-6">
+            Sneller antwoorden op e-mails, zonder robottaal
+          </h1>
+          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+            AI die conceptantwoorden voor je mails voorbereidt, zodat jij enkel nog hoeft te reviewen en verzenden.
+          </p>
+          <div className="flex gap-4 justify-center flex-wrap">
+            <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
+              Probeer gratis demo
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+            <Button size="lg" variant="outline">
+              <Play className="mr-2 h-5 w-5" />
+              Bekijk hoe het werkt
+            </Button>
+          </div>
+        </div>
+      </section>
 
-      {/* Content */}
-      <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="mb-6"
-        >
-          <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-medium mb-8">
-            <Sparkles className="w-4 h-4" />
-            Powered by AI Technology
+      {/* Hoe Eply werkt */}
+      <section className="py-20 px-4 bg-white">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Hoe Eply werkt</h2>
+            <p className="text-gray-600">Drie simpele stappen naar efficiëntere e-mailcommunicatie</p>
           </div>
           
-          <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight">
-            Automatische{' '}
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Draft-Replies
-            </span>{' '}
-            met AI
-          </h1>
-          
-          <p className="text-xl md:text-2xl text-gray-600 mb-8 leading-relaxed max-w-3xl mx-auto">
-            Transformeer je e-mail workflow met intelligente AI-ondersteuning. 
-            Genereer professionele conceptantwoorden binnen seconden en verhoog je productiviteit.
-          </p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          className="flex flex-col sm:flex-row gap-4 justify-center items-center"
-        >
-          {isAuthenticated ? (
-            <Button
-              size="lg"
-              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-              onClick={() => router.push('/dashboard')}
-            >
-              <ArrowRight className="w-5 h-5 mr-2" />
-              Dashboard
-            </Button>
-          ) : (
-            <Button
-              disabled={loading}
-              size="lg"
-              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-              onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/outlook-login`}
-            >
-              <Mail className="w-5 h-5 mr-2" />
-              {loading ? 'Laden...' : 'Login met Outlook'}
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-          )}
-                    
-          <Button
-            variant="outline"
-            size="lg"
-            className="px-8 py-6 text-lg rounded-full border-2 hover:bg-gray-50 transition-all duration-300"
-          >
-            Meer informatie
-          </Button>
-        </motion.div>
-
-        {/* Feature highlights */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.4 }}
-          className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto"
-        >
-          {[
-            {
-              icon: <Sparkles className="w-8 h-8 text-blue-600" />,
-              title: 'AI-Powered',
-              description: 'Intelligente concepten op basis van context'
-            },
-            {
-              icon: <Mail className="w-8 h-8 text-purple-600" />,
-              title: 'Outlook Integratie',
-              description: 'Naadloze verbinding met je e-mail'
-            },
-            {
-              icon: <ArrowRight className="w-8 h-8 text-green-600" />,
-              title: 'Tijdsbesparing',
-              description: 'Tot 80% sneller e-mailen'
-            }
-          ].map((feature, index) => (
-            <div
-              key={index}
-              className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/80 transition-all duration-300 hover:shadow-lg"
-            >
-              <div className="mb-4">{feature.icon}</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
-              <p className="text-gray-600">{feature.description}</p>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Mail className="h-8 w-8 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-4">Mail komt binnen</h3>
+              <p className="text-gray-600">
+                Eply leest mee in je inbox (veilig & privé).
+              </p>
             </div>
-          ))}
-        </motion.div>
-      </div>
+            
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Brain className="h-8 w-8 text-green-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-4">Draft staat klaar</h3>
+              <p className="text-gray-600">
+                AI maakt een conceptantwoord in jouw toon, op basis van eerdere mails en bedrijfsinformatie.
+              </p>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle className="h-8 w-8 text-purple-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-4">Jij beslist</h3>
+              <p className="text-gray-600">
+                Je reviewt, klikt op verzenden — klaar.
+              </p>
+            </div>
+          </div>
+          
+          <div className="mt-16 text-center">
+            <Card className="max-w-2xl mx-auto">
+              <CardContent className="p-8">
+                <p className="text-lg text-gray-700">
+                  "Eply leert van jouw eerdere communicatie en bedrijfscontext. 
+                  Zo blijven antwoorden consistent, professioneel en herkenbaar."
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Waarom Eply? */}
+      <section className="py-20 px-4 bg-gray-50">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Waarom Eply?</h2>
+            <p className="text-gray-600">Tastbare voordelen die je direct merkt</p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            <Card>
+              <CardHeader className="text-center">
+                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Clock className="h-6 w-6 text-orange-600" />
+                </div>
+                <CardTitle>⏳ Tijd terug</CardTitle>
+                <CardDescription>Geen uren meer in je mailbox.</CardDescription>
+              </CardHeader>
+            </Card>
+            
+            <Card>
+              <CardHeader className="text-center">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <MessageCircle className="h-6 w-6 text-blue-600" />
+                </div>
+                <CardTitle>💬 Menselijk</CardTitle>
+                <CardDescription>Antwoorden voelen persoonlijk, niet robotachtig.</CardDescription>
+              </CardHeader>
+            </Card>
+            
+            <Card>
+              <CardHeader className="text-center">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Shield className="h-6 w-6 text-green-600" />
+                </div>
+                <CardTitle>🔒 Veilig</CardTitle>
+                <CardDescription>Je data blijft van jou.</CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Social Proof */}
+      <section className="py-20 px-4 bg-white">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Wat onze gebruikers zeggen</h2>
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-8">
+            <Card>
+              <CardContent className="p-8">
+                <div className="flex items-center mb-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
+                  ))}
+                </div>
+                <p className="text-lg mb-4">
+                  "Dit bespaart ons 5 uur per week. De antwoorden voelen echt als onze eigen communicatie."
+                </p>
+                <div className="flex items-center">
+                  <div className="w-10 h-10 bg-gray-200 rounded-full mr-4"></div>
+                  <div>
+                    <p className="font-semibold">Sarah van der Berg</p>
+                    <p className="text-gray-600 text-sm">Customer Success Manager</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-8">
+                <div className="flex items-center mb-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
+                  ))}
+                </div>
+                <p className="text-lg mb-4">
+                  "Eindelijk kan ik me focussen op belangrijke taken. Eply neemt de mailstress weg."
+                </p>
+                <div className="flex items-center">
+                  <div className="w-10 h-10 bg-gray-200 rounded-full mr-4"></div>
+                  <div>
+                    <p className="font-semibold">Mark Jansen</p>
+                    <p className="text-gray-600 text-sm">Operations Director</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <div className="mt-16 text-center">
+            <p className="text-gray-600 mb-8">Vertrouwd door innovatieve bedrijven</p>
+            <div className="flex justify-center items-center gap-8 opacity-60">
+              <Badge variant="outline" className="p-4 text-lg">TechStart B.V.</Badge>
+              <Badge variant="outline" className="p-4 text-lg">Innovate Solutions</Badge>
+              <Badge variant="outline" className="p-4 text-lg">Digital First</Badge>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Wie zijn wij? */}
+      <section className="py-20 px-4 bg-blue-50">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl font-bold text-gray-900 mb-8">Wie zijn wij?</h2>
+          <div className="bg-white rounded-lg p-8 shadow-sm">
+            <div className="w-32 h-32 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full mx-auto mb-6 flex items-center justify-center">
+              <Users className="h-16 w-16 text-white" />
+            </div>
+            <p className="text-lg text-gray-700 mb-6">
+              Wij zijn twee jonge ondernemers die geloven dat AI bedrijven kan helpen zonder de menselijke touch te verliezen. 
+              Met Eply bouwen we de toekomst van slimme e-mailcommunicatie.
+            </p>
+            <p className="text-gray-600">
+              Onze missie: tijd winnen zonder menselijkheid te verliezen.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section className="py-20 px-4 bg-white">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Transparante prijzen</h2>
+            <p className="text-gray-600">Investeer in tijd, niet in uren emailen</p>
+          </div>
+          
+          <Card className="max-w-md mx-auto">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl">Vanaf €20</CardTitle>
+              <CardDescription>per gebruiker per maand</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4 mb-8">
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
+                  <span>Onbeperkte concepten</span>
+                </div>
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
+                  <span>Leert van jouw toon</span>
+                </div>
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
+                  <span>Veilige integratie</span>
+                </div>
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
+                  <span>24/7 support</span>
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                <p className="text-sm text-gray-600">
+                  <strong>Rekensom:</strong> 5 uur per week bespaard × €50/uur = €250 per week. 
+                  Eply kost €20 per maand. De investering verdient zich in 2 dagen terug.
+                </p>
+              </div>
+              
+              <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                Start gratis demo
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* Contact / Demo */}
+      <section className="py-20 px-4 bg-gray-900 text-white">
+        <div className="max-w-2xl mx-auto text-center">
+          <h2 className="text-3xl font-bold mb-4">Klaar om te beginnen?</h2>
+          <p className="text-gray-300 mb-8">
+            Boek een persoonlijke demo en zie hoe Eply jouw e-mailstress wegneemt.
+          </p>
+          
+          <div className="space-y-6">
+            <div className="grid md:grid-cols-2 gap-4">
+              <Input 
+                placeholder="Je naam" 
+                className="bg-white text-gray-900"
+              />
+              <Input 
+                placeholder="Je e-mailadres" 
+                className="bg-white text-gray-900"
+              />
+            </div>
+            <Textarea 
+              placeholder="Vertel kort over je bedrijf (optioneel)"
+              className="bg-white text-gray-900"
+            />
+            <Button size="lg" className="bg-blue-600 hover:bg-blue-700 w-full md:w-auto">
+              Boek een kennismaking
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </div>
+          
+          <div className="mt-8 pt-8 border-t border-gray-700">
+            <p className="text-gray-400">
+              Of mail direct naar: <a href="mailto:info@eply.nl" className="text-blue-400 hover:underline">info@eply.nl</a>
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
-  );
+  )
 }
