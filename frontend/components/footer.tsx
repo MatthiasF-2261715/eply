@@ -1,5 +1,4 @@
-import { Button } from "@/components/ui/button"
-import { Mail, Linkedin, Twitter, ArrowRight } from "lucide-react"
+import { Mail, Linkedin,  Instagram } from "lucide-react"
 
 export function Footer() {
   return (
@@ -12,10 +11,6 @@ export function Footer() {
             <p className="text-gray-600 mb-6">
               AI die conceptantwoorden voor je mails voorbereidt, zodat jij enkel nog hoeft te reviewen en verzenden.
             </p>
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              Start met Eply
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
           </div>
           
           {/* Contact */}
@@ -24,13 +19,13 @@ export function Footer() {
             <div className="space-y-2">
               <p className="text-gray-600">info@eply.nl</p>
               <div className="flex space-x-4 mt-4">
-                <a href="#" className="text-gray-400 hover:text-gray-600">
+                <a href="https://www.linkedin.com/company/eplybe/posts/?feedView=all" className="text-gray-400 hover:text-gray-600">
                   <Linkedin className="h-5 w-5" />
                 </a>
-                <a href="#" className="text-gray-400 hover:text-gray-600">
-                  <Twitter className="h-5 w-5" />
+                <a href="https://www.instagram.com/eply.be/" className="text-gray-400 hover:text-gray-600">
+                  <Instagram className="h-5 w-5" />
                 </a>
-                <a href="#" className="text-gray-400 hover:text-gray-600">
+                <a href="mailto:info@eply.nl" className="text-gray-400 hover:text-gray-600">
                   <Mail className="h-5 w-5" />
                 </a>
               </div>
@@ -59,7 +54,7 @@ export function Footer() {
             © 2025 Eply. Alle rechten voorbehouden.
           </p>
           <p className="text-gray-500 text-sm">
-            Made with ❤️ in Belgium
+            Made in Belgium
           </p>
         </div>
       </div>

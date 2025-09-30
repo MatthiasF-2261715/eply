@@ -51,7 +51,7 @@ export default function ImapLoginPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-200">
+    <main className="min-h-screen flex items-center justify-center">
       <form
         onSubmit={handleSubmit}
         className="bg-white shadow-lg rounded-xl p-8 w-full max-w-md flex flex-col gap-4"

@@ -6,7 +6,7 @@ export default function LoginPage() {
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
   
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-200">
+    <main className="min-h-screen flex items-center justify-center">
       <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-md">
         <h1 className="text-3xl font-bold mb-6 text-center text-blue-700">Login</h1>
         <div className="flex flex-col gap-4">

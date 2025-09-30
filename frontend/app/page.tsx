@@ -46,7 +46,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen overflow-hidden">
       {/* Hero Section with Animated Background */}
-      <section className="relative py-20 px-4 overflow-hidden">
+      <section className="relative py-20 px-20">
         {/* Animated Background Elements */}
         <div className="absolute inset-0">
           <motion.div
@@ -388,68 +388,6 @@ export default function HomePage() {
               }}
             />
           ))}
-        </div>
-
-        <div className="max-w-2xl mx-auto text-center relative z-10">
-          <motion.h2 
-            className="text-3xl md:text-4xl font-bold mb-4"
-            {...fadeInUp}
-          >
-            Klaar om te beginnen?
-          </motion.h2>
-          <motion.p 
-            className="text-gray-300 mb-8 text-lg"
-            {...fadeInUp}
-          >
-            Boek een persoonlijke demo en zie hoe Eply jouw e-mailstress wegneemt.
-          </motion.p>
-          
-          <motion.div 
-            className="space-y-6"
-            variants={staggerContainer}
-            initial="initial"
-            whileInView="animate"
-            viewport={{ once: true }}
-          >
-            <motion.div className="grid md:grid-cols-2 gap-4" variants={fadeInUp}>
-              <Input 
-                placeholder="Je naam" 
-                className="bg-white/10 backdrop-blur-sm border-white/20 text-white placeholder:text-gray-300 focus:bg-white/20 transition-all"
-              />
-              <Input 
-                placeholder="Je e-mailadres" 
-                className="bg-white/10 backdrop-blur-sm border-white/20 text-white placeholder:text-gray-300 focus:bg-white/20 transition-all"
-              />
-            </motion.div>
-            <motion.div variants={fadeInUp}>
-              <Textarea 
-                placeholder="Vertel kort over je bedrijf (optioneel)"
-                className="bg-white/10 backdrop-blur-sm border-white/20 text-white placeholder:text-gray-300 focus:bg-white/20 transition-all"
-              />
-            </motion.div>
-            <motion.div 
-              variants={fadeInUp}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 w-full md:w-auto shadow-xl">
-                <TrendingUp className="mr-2 h-5 w-5" />
-                Boek een kennismaking
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </motion.div>
-          </motion.div>
-          
-          <motion.div 
-            className="mt-8 pt-8 border-t border-gray-700"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-          >
-            <p className="text-gray-400">
-              Of mail direct naar: <a href="mailto:info@eply.nl" className="text-blue-400 hover:text-blue-300 transition-colors hover:underline">info@eply.nl</a>
-            </p>
-          </motion.div>
         </div>
       </section>
     </div>
