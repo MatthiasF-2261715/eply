@@ -28,9 +28,8 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-8 py-4 flex items-center justify-between">
         {/* Links: Logo + Eply */}
         <div className="flex items-center space-x-1">
-          <img src="/logo.png" alt="Logo" className="w-8 h-8 rounded-md" />
           <Link href="/" className="font-bold text-lg text-black ml-1">
-            Eply
+            <img src="/logo.png" alt="Logo" className="w-8 h-8 rounded-md" />
           </Link>
         </div>
         {/* Midden: About Us, Pricing, Learn */}
@@ -76,7 +75,7 @@ export function Navbar() {
                 Login
               </Link>
               <Link
-                href="/boek-demo"
+                href="/contact"
                 className="bg-black text-white font-semibold text-sm px-4 py-2 rounded-md hover:bg-gray-900 transition"
                 style={{ borderRadius: '6px' }}
               >

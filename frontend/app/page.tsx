@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { motion } from "framer-motion"
 import { useState } from "react"
+import Link from "next/link"
 
 export default function HomePage() {
   const [hoveredCard, setHoveredCard] = useState<number | null>(null)
@@ -126,11 +127,13 @@ export default function HomePage() {
             transition={{ duration: 0.8, delay: 0.4 }}
           >
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg">
-                <Zap className="mr-2 h-5 w-5" />
-                Probeer gratis demo
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
+              <Link href="/contact">
+                <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg">
+                  <Zap className="mr-2 h-5 w-5" />
+                  Probeer gratis demo
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
             </motion.div>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Button size="lg" variant="outline" className="border-2 hover:bg-gray-50">
