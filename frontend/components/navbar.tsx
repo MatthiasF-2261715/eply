@@ -25,15 +25,15 @@ export function Navbar() {
 
   return (
     <nav className="w-full bg-[#f1f0ee]">
-      <div className="max-w-7xl mx-auto px-8 py-4 flex items-center justify-between">
+      <div className="max-w-none mx-auto px-20 py-4 flex items-center justify-between">
         {/* Links: Logo + Eply */}
         <div className="flex items-center space-x-1">
           <Link href="/" className="font-bold text-lg text-black ml-1">
-            <img src="/logo.png" alt="Logo" className="w-8 h-8 rounded-md" />
+            <img src="/logo.png" alt="Logo" className="w-20 h-20 rounded-md" />
           </Link>
         </div>
         {/* Midden: About Us, Pricing, Learn */}
-        <div className="flex items-center space-x-6">
+        <div className="flex items-center space-x-8">
           <Link
             href="/about"
             className={cn(
@@ -63,7 +63,7 @@ export function Navbar() {
           </Link>
         </div>
         {/* Rechts: Login/Boek een Demo of Dashboard */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-4">
           {!loading && !isAuthenticated && (
             <>
               <Link
