@@ -46,16 +46,30 @@ function fetchHeaders(imap, id, treatAsUid) {
 function buildReplyHeaders(originalHeaders, email, imapServer) {
     const subjectOrig = originalHeaders.subject?.[0] || '';
     const subject = /^Re:/i.test(subjectOrig) ? subjectOrig : 'Re: ' + subjectOrig;
+    
     const replyTo = originalHeaders['reply-to']?.[0];
-    const toHeader = replyTo || originalHeaders.from?.[0] || '';
+    const fromHeader = originalHeaders.from?.[0];
+    const toHeader = replyTo || fromHeader || '';
+    
     const origMsgId = originalHeaders['message-id']?.[0] || '';
     const newMessageId = `<${Date.now()}${Math.random().toString().slice(2)}@${imapServer}>`;
+    
     const refSet = new Set();
     if (originalHeaders.references?.[0]) {
-        originalHeaders.references[0].trim().split(/\s+/).forEach(ref => refSet.add(ref));
+        // Handle multiple reference formats
+        const refs = originalHeaders.references[0].trim().split(/\s+/);
+        refs.forEach(ref => {
+            if (ref.startsWith('<') && ref.endsWith('>')) {
+                refSet.add(ref);
+            }
+        });
     }
-    if (origMsgId) refSet.add(origMsgId);
+    if (origMsgId && origMsgId.startsWith('<') && origMsgId.endsWith('>')) {
+        refSet.add(origMsgId);
+    }
+    
     const references = Array.from(refSet);
+    
     return {
         subject,
         toHeader,
@@ -69,6 +83,7 @@ function buildReplyHeaders(originalHeaders, email, imapServer) {
 function createDraftMessage(headers, aiReply, email) {
     const { subject, toHeader, ccHeader, newMessageId, origMsgId, references } = headers;
     const body = aiReply.trim();
+    
     const headerLines = [
         `From: <${email}>`,
         `To: ${toHeader}`,
@@ -82,6 +97,7 @@ function createDraftMessage(headers, aiReply, email) {
         'Content-Type: text/plain; charset=utf-8',
         'Content-Transfer-Encoding: 7bit'
     ].filter(Boolean).join('\r\n');
+    
     return headerLines + '\r\n\r\n' + body + '\r\n';
 }
 
