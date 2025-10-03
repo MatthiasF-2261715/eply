@@ -126,7 +126,7 @@ router.post('/ai/reply', isAuthenticated, async function (req, res) {
         if (originalMailId) {
             console.log('Creating draft using method:', req.session.method);
             if (req.session.method === 'imap') {
-                await createImapDraft(req.session, aiResponse, originalMailId);
+                await createImapDraft(req.session, aiResponse, originalMailId, content);
                 console.log('IMAP draft created successfully');
             } else if (req.session.method === 'outlook') {
                 await createOutlookDraft(req.session, aiResponse, originalMailId);

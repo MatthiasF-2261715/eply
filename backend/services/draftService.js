@@ -101,7 +101,17 @@ function createDraftMessage(headers, aiReply, email) {
     return headerLines + '\r\n\r\n' + body + '\r\n';
 }
 
-async function createImapDraft(session, ai_reply, mail_id, { mailbox = 'INBOX', treatAsUid = true } = {}) {
+function formatOriginalMessage(originalHeaders, originalMail) {
+    const from = originalHeaders.from?.[0] || '';
+    const date = originalHeaders.date?.[0] || new Date().toUTCString();
+    const to = originalHeaders.to?.[0] || '';
+    const subject = originalHeaders.subject?.[0] || '';
+    
+    // Format like Outlook does
+    return `\n\n________________________________\nFrom: ${from}\nSent: ${date}\nTo: ${to}\nSubject: ${subject}\n\n${originalMail}`;
+}
+
+async function createImapDraft(session, ai_reply, mail_id, original_mail, { mailbox = 'INBOX', treatAsUid = true } = {}) {
     if (!session?.imap) throw new Error('IMAP sessie ontbreekt');
     if (!ai_reply) throw new Error('ai_reply ontbreekt');
     if (!mail_id) throw new Error('mail_id ontbreekt');
@@ -118,7 +128,14 @@ async function createImapDraft(session, ai_reply, mail_id, { mailbox = 'INBOX', 
                 if (!buffer.length) throw new Error('Geen headers gevonden');
                 const originalHeaders = Imap.parseHeader(buffer.toString('utf8'));
                 const replyHeaders = buildReplyHeaders(originalHeaders, session.imap.email, session.imap.imapServer);
-                const draftRaw = createDraftMessage(replyHeaders, ai_reply, session.imap.email);
+                
+                
+                let fullReply = ai_reply;
+                if (original_mail) {
+                    fullReply += formatOriginalMessage(originalHeaders, original_mail);
+                }
+                
+                const draftRaw = createDraftMessage(replyHeaders, fullReply, session.imap.email);
                 await new Promise((res, rej) => 
                     imap.openBox(DRAFTS, false, err => err ? rej(err) : res())
                 );
