@@ -6,6 +6,7 @@ const { getInboxEmails, getSentEmails } = require('../services/emailService');
 const { createImapDraft, createOutlookDraft } = require('../services/draftService');
 const { getAssistantByEmail, isUserWhitelisted } = require('../database');
 const { useAssistant } = require('../assistant');
+const { filterHtmlContent } = require('../services/htmlFilterService');
 
 router.get('/id', isAuthenticated, async (req, res) => {
     res.render('id', { idTokenClaims: req.session.account?.idTokenClaims });
@@ -112,6 +113,12 @@ router.post('/ai/reply', isAuthenticated, async function (req, res) {
     if (!email || !content) {
         return res.status(400).json({ error: 'Email en content zijn verplicht.' });
     }
+
+    if (req.session.method === 'outlook') {
+        content = filterHtmlContent(content);
+        console.log('Filtered HTML content for Outlook:', content);
+    }
+
     console.log('Extracted email:', content);
     try {
         const sentEmails = await getSentEmails(req.session.method, req.session);
