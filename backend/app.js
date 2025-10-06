@@ -27,15 +27,28 @@ const pool = new Pool({
 });
 
 const corsOptions = {
-  origin: [
-    'http://www.eply.be',
-    'https://www.eply.be',
-    'http://eply.be',
-    'https://eply.be',
-  ],
+  origin: function (origin, callback) {
+    // Toegestane origins
+    const allowedOrigins = [
+      'http://localhost:3000',  // Voor development
+      'http://www.eply.be',
+      'https://www.eply.be',
+      'http://eply.be',
+      'https://eply.be',
+    ];
+    
+    // Sta requests zonder origin toe (bijv. mobiele apps, Postman)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With'],
   optionsSuccessStatus: 200
 };
 
