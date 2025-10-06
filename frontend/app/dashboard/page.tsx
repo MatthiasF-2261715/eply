@@ -96,9 +96,9 @@ export default function Dashboard() {
 
     console.log('Geselecteerde e-mail voor antwoord:', targetEmail);
 
-    const emailAddress = targetEmail.from;
+    const emailAddress = targetEmail.from || targetEmail.sender.address;
     const title = targetEmail.subject;
-    const content = targetEmail.text || targetEmail.content;
+    const content = targetEmail.text || targetEmail.content || targetEmail.body.content;
     const originalMailId = targetEmail.id || '';
 
     if (!emailAddress || !title || !content) {
