@@ -26,36 +26,15 @@ const pool = new Pool({
   } : false, // Only use SSL in production
 });
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Toegestane origins
-    const allowedOrigins = [
-      'http://localhost:3000',  // Voor development
-      'http://www.eply.be',
-      'https://www.eply.be',
-      'http://eply.be',
-      'https://eply.be',
-    ];
-    
-    // Sta requests zonder origin toe (bijv. mobiele apps, Postman)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'https://www.eply.be/'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With'],
-  optionsSuccessStatus: 200
-};
-
-app.use(cors(corsOptions));
-
-// Safari heeft expliciete preflight handling nodig
-app.options('*', cors(corsOptions));
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
+}));
 
 app.set('trust proxy', 1);
 
@@ -65,8 +44,8 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    secure: isProduction,       // moet true zijn in productie
-    sameSite: isProduction ? 'none' : 'lax', // None in prod voor OAuth/IMAP
+    secure: isProduction,
+    sameSite: 'none',
     maxAge: 24 * 60 * 60 * 1000,
   },
   store: isProduction ? new (require('connect-pg-simple')(session))({
