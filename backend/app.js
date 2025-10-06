@@ -26,12 +26,23 @@ const pool = new Pool({
   } : false, // Only use SSL in production
 });
 
-app.use(cors({
-  origin: true, // Tijdelijk - accepteer alle origins
+const corsOptions = {
+  origin: [
+    'http://www.eply.be',
+    'https://www.eply.be',
+    'http://eply.be',
+    'https://eply.be',
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
-}));
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
+
+// Safari heeft expliciete preflight handling nodig
+app.options('*', cors(corsOptions));
 
 app.set('trust proxy', 1);
 
