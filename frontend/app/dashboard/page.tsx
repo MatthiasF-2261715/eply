@@ -96,9 +96,10 @@ export default function Dashboard() {
 
     console.log('Geselecteerde e-mail voor antwoord:', targetEmail);
 
-    const emailAddress = targetEmail.from || targetEmail.sender.address;
+    // Handle different email formats (IMAP vs Outlook)
+    const emailAddress = targetEmail.from?.emailAddress?.address || targetEmail.from;
     const title = targetEmail.subject;
-    const content = targetEmail.text || targetEmail.content || targetEmail.body.content;
+    const content = targetEmail.body?.content || targetEmail.text || targetEmail.content;
     const originalMailId = targetEmail.id || '';
 
     if (!emailAddress || !title || !content) {
@@ -347,13 +348,18 @@ export default function Dashboard() {
                   ) : (
                     emails.map((email, index) => {
                       const subject = email.subject || '(Geen onderwerp)';
-                      const from = email.from || 'Onbekend';
-                      const to = email.to || '';
+                      // Handle different from formats
+                      const from = email.from?.emailAddress?.address || email.from || 'Onbekend';
+                      const to = email.to?.emailAddress?.address || email.to || '';
                       const date = email.date
                         ? new Date(email.date).toLocaleString('nl-NL', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })
                         : '';
+                      
+                      // Create a simple string key instead of using complex objects
+                      const emailKey = `${email.id || index}-${subject}`;
+                      
                       return (
-                        <div key={email.id || index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <div key={emailKey} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                           <div className="flex-1">
                             <p className="font-medium text-gray-900">{subject}</p>
                             <p className="text-sm text-gray-600">Van: {from}</p>
