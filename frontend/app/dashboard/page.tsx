@@ -140,6 +140,12 @@ export default function Dashboard() {
       }
 
       const data = await response.json();
+
+      if (data.skip) {
+        console.log('Email overgeslagen:', data.reason);
+        return;
+      }
+      
       setCurrentReply(data.response || 'Geen antwoord ontvangen');
       setShowReplyPopup(true);
     } catch (err) {
