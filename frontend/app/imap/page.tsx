@@ -1,21 +1,45 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Server, Mail, Lock, Hash } from 'lucide-react';
 
 export default function ImapLoginPage() {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({
     imapServer: '',
     port: '',
     email: '',
     password: '',
   });
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+  useEffect(() => {
+    fetch(`${BACKEND_URL}/users/profile`, {
+      credentials: 'include',
+    })
+      .then(async (res) => {
+        if (res.ok && !res.redirected) {
+          // Als de user is ingelogd, redirect naar dashboard
+          router.replace('/dashboard');
+        }
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [BACKEND_URL, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <span className="text-gray-500 text-lg">Laden...</span>
+      </div>
+    );
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -23,11 +47,11 @@ export default function ImapLoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setIsSubmitting(true);
     setError('');
     if (!form.email || !form.password || !form.imapServer || !form.port) {
       setError('Vul alle velden in.');
-      setLoading(false);
+      setIsSubmitting(false);
       return;
     }
 
@@ -54,7 +78,7 @@ export default function ImapLoginPage() {
       setError('Er is een fout opgetreden. Probeer opnieuw.');
     }
 
-    setLoading(false);
+    setIsSubmitting(false);
   };
 
   return (
@@ -137,10 +161,10 @@ export default function ImapLoginPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={isSubmitting}
               className="w-full bg-[#3B82F6] text-white py-4 rounded-xl hover:bg-[#2563EB] transition-all hover:-translate-y-1 shadow-lg hover:shadow-xl font-semibold text-lg disabled:opacity-60"
             >
-              {loading ? 'Bezig met verbinden...' : 'Verbinden'}
+              {isSubmitting ? 'Bezig met verbinden...' : 'Verbinden'}
             </button>
           </form>
         </div>

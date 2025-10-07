@@ -2,9 +2,36 @@
 
 import Link from 'next/link';
 import { Mail, Server } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${BACKEND_URL}/users/profile`, {
+      credentials: 'include',
+    })
+      .then(async (res) => {
+        if (res.ok && !res.redirected) {
+          // Als de user is ingelogd, redirect naar dashboard
+          router.replace('/dashboard');
+        }
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [BACKEND_URL, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <span className="text-gray-500 text-lg">Laden...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white pt-24 pb-20 px-4">

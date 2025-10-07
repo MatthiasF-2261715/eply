@@ -92,7 +92,7 @@ export default function Navbar() {
                 </Link>
                 <button
                   onClick={() => scrollToSection('contact')}
-                  className="bg-[#3B82F6] text-white px-6 py-2 rounded-full hover:bg-[#2563EB] transition-all hover:-translate-y-0.5 shadow-lg hover:shadow-xl"
+                  className="bg-[#3B82F6] text-white px-6 py-2 rounded-md hover:bg-[#2563EB] transition-all hover:-translate-y-0.5 shadow-lg hover:shadow-xl"
                 >
                   Boek een Demo
                 </button>
@@ -100,7 +100,7 @@ export default function Navbar() {
             ) : (
               <Link
                 href="/dashboard"
-                className="bg-[#3B82F6] text-white px-6 py-2 rounded-full hover:bg-[#2563EB] transition-all hover:-translate-y-0.5 shadow-lg hover:shadow-xl"
+                className="bg-[#3B82F6] text-white px-6 py-2 rounded-md hover:bg-[#2563EB] transition-all hover:-translate-y-0.5 shadow-lg hover:shadow-xl"
               >
                 Dashboard
               </Link>
