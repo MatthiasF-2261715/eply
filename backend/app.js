@@ -26,32 +26,15 @@ const pool = new Pool({
   } : false, // Only use SSL in production
 });
 
-const allowedOrigins = [
-  'http://localhost:3000',
-  'https://www.eply.be'
-];
-
-const corsOptions = {
-  origin: function (origin, callback) {
-    // In productie strikte origin checking
-    if (process.env.NODE_ENV === 'production') {
-      if (allowedOrigins.includes(origin)) {
-        callback(null, origin);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    } else {
-      // In development ook requests zonder origin toestaan voor lokaal testen
-      callback(null, origin || allowedOrigins[0]);
-    }
-  },
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'https://www.eply.be'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
-};
-
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+}));
 
 app.set('trust proxy', 1);
 
