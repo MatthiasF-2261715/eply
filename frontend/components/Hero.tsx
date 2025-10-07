@@ -65,7 +65,7 @@ export default function Hero() {
                 <div className="bg-gray-50 p-4 rounded-xl opacity-70">
                   <div className="flex items-start gap-3">
                     <div className="flex-1">
-                      <p className="font-semibold text-[#0B1220] mb-1">Follow-up vraag</p>
+                      <p className="font-semibold text-[#0B1220] mb-1">Meeting 06/10</p>
                       <p className="text-sm text-gray-600">Van: contact@startup.com</p>
                     </div>
                   </div>
@@ -74,7 +74,7 @@ export default function Hero() {
                 <div className="bg-gray-50 p-4 rounded-xl opacity-70">
                   <div className="flex items-start gap-3">
                     <div className="flex-1">
-                      <p className="font-semibold text-[#0B1220] mb-1">Vergaderbevestiging</p>
+                      <p className="font-semibold text-[#0B1220] mb-1">Vraag over systeemfout</p>
                       <p className="text-sm text-gray-600">Van: team@partner.be</p>
                     </div>
                   </div>

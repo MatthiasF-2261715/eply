@@ -10,7 +10,6 @@ export default function Pricing() {
       period: '/maand',
       description: 'Perfect voor kleine ondernemers',
       features: [
-        'Tot 100 e-mails per maand',
         'Persoonlijke AI-assistent',
         'Basis integraties',
         'E-mail support',

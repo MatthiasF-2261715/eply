@@ -9,7 +9,7 @@ export default function Footer() {
         <div className="grid md:grid-cols-4 gap-8 mb-8">
           <div className="md:col-span-2">
             <div className="flex items-center space-x-2 mb-4">
-              <img src="/logo.png" alt="Eply logo" className="w-20 h-10" />
+              <img src="/logo.png" alt="Eply logo" className="w-20 h-20" />
             </div>
             <p className="text-gray-400 mb-4">
               Eply analyseert je inkomende e-mails en stelt direct professionele concepten voor — in jouw toon.
@@ -66,7 +66,7 @@ export default function Footer() {
               <li>info@eply.be</li>
               <li>+32 472 36 25 18</li>
               <li>BE 1027.205.452</li>
-              <li>Herengracht 59,3665As</li>
+              <li>Herengracht 59,3665 As</li>
             </ul>
           </div>
         </div>

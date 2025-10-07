@@ -44,14 +44,20 @@ export default function HowItWorks() {
         </div>
 
         {/* New service highlight section */}
-        <div className="mt-16 text-center bg-blue-50 rounded-2xl p-8 border border-blue-100">
-          <h3 className="text-2xl font-bold text-[#0B1220] mb-4">
-            Wij regelen alles voor je
-          </h3>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            In een wereld waar AI razendsnel evolueert, zorgen wij dat jij moeiteloos mee bent.
-            We schrijven je prompts, stellen alles in, en begeleiden je tot het werkt zoals jij wil.
-          </p>
+        <div className="mt-16 text-center p-8 rounded-2xl border border-blue-100 relative overflow-hidden animate-pulse-slow">
+          {/* Animated gradient background */}
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-50 via-white to-blue-50 animate-gradient-x" />
+          
+          {/* Content with relative positioning to appear above the animated background */}
+          <div className="relative z-10">
+            <h3 className="text-2xl font-bold text-[#0B1220] mb-4">
+              Wij regelen alles voor je
+            </h3>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              In een wereld waar AI razendsnel evolueert, zorgen wij dat jij moeiteloos mee bent.
+              We schrijven je prompts, stellen alles in, en begeleiden je tot het werkt zoals jij wil.
+            </p>
+          </div>
         </div>
       </div>
     </section>

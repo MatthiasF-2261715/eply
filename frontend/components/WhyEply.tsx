@@ -49,7 +49,7 @@ export default function WhyEply() {
         <div className="mt-16 bg-white rounded-2xl p-12 shadow-xl border border-gray-100">
           <div className="max-w-3xl mx-auto text-center space-y-6">
             <h3 className="text-3xl font-bold text-[#0B1220]">
-              Doe toekomst mailt slimmer -- jij ook?
+              De toekomst mailt slimmer -- jij ook?
             </h3>
             <p className="text-xl text-gray-600">
               Probeer het zelf. Je mailbox zal nooit meer hetzelfde zijn.
