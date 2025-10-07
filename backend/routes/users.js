@@ -7,6 +7,7 @@ const { createImapDraft, createOutlookDraft } = require('../services/draftServic
 const { getAssistantByEmail, isUserWhitelisted } = require('../database');
 const { useAssistant } = require('../assistant');
 const { filterHtmlContent } = require('../services/htmlFilterService');
+const { validateEmail } = require('../services/emailValidationService');
 
 router.get('/id', isAuthenticated, async (req, res) => {
     res.render('id', { idTokenClaims: req.session.account?.idTokenClaims });
@@ -112,6 +113,17 @@ router.post('/ai/reply', isAuthenticated, async function (req, res) {
     console.log('AI reply request:', { email, title, content, originalMailId });
     if (!email || !content) {
         return res.status(400).json({ error: 'Email en content zijn verplicht.' });
+    }
+
+    const validation = await validateEmail(email, content);
+    if (!validation.valid) {
+        return res.json({
+            skip: true,
+            reason: validation.reason,
+            message: validation.reason === 'no-reply' 
+                ? 'Dit is een no-reply email adres.'
+                : 'Deze email lijkt geautomatiseerd of spam te zijn.'
+        });
     }
 
     if (req.session.method === 'outlook') {
