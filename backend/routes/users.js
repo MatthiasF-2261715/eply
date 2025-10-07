@@ -116,6 +116,7 @@ router.post('/ai/reply', isAuthenticated, async function (req, res) {
     }
 
     const validation = await validateEmail(email, content);
+    console.log(validation);
     if (!validation.valid) {
         return res.json({
             skip: true,

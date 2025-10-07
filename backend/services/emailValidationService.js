@@ -17,6 +17,7 @@ function isNoReplyAddress(email) {
 
 async function checkWithAI(emailContent) {
   try {
+    console.log(emailContent);
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [{
