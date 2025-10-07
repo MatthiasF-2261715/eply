@@ -44,11 +44,17 @@ export default function HowItWorks() {
         </div>
 
         {/* New service highlight section */}
-        <div className="mt-16 text-center p-8 rounded-2xl border border-blue-100 relative overflow-hidden animate-pulse-slow">
-          {/* Animated gradient background */}
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-50 via-white to-blue-50 animate-gradient-x" />
+        <div className="mt-16 text-center p-8 rounded-2xl relative overflow-hidden bg-gradient-to-r from-blue-50 to-white">
+          {/* Dynamic background effect */}
+          <div className="absolute inset-0">
+            <div className="absolute inset-0 opacity-20">
+              <div className="absolute top-0 -left-4 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl animate-blob"></div>
+              <div className="absolute top-0 -right-4 w-72 h-72 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"></div>
+              <div className="absolute -bottom-8 left-20 w-72 h-72 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-4000"></div>
+            </div>
+          </div>
           
-          {/* Content with relative positioning to appear above the animated background */}
+          {/* Content */}
           <div className="relative z-10">
             <h3 className="text-2xl font-bold text-[#0B1220] mb-4">
               Wij regelen alles voor je
