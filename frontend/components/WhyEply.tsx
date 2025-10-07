@@ -6,8 +6,8 @@ export default function WhyEply() {
   const features = [
     {
       icon: Clock,
-      title: 'Tijdwinst',
-      description: 'Bespaar tot 70% van je tijd aan e-mailcorrespondentie. Meer focus voor wat echt telt.',
+      title: 'Tijdswinst',
+      description: 'Bespaar uren per week aan je e-mails. Meer focus voor wat echt telt.',
     },
     {
       icon: MessageSquare,
@@ -17,7 +17,7 @@ export default function WhyEply() {
     {
       icon: Shield,
       title: 'Veiligheid',
-      description: 'Privacy first. Jouw data wordt versleuteld opgeslagen en nooit gedeeld met derden.',
+      description: 'We gaan zorgvuldig om met jouw data. Jouw gegevens blijven privé en veilig.',
     },
   ];
 
@@ -27,7 +27,7 @@ export default function WhyEply() {
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold text-[#0B1220] mb-4">Waarom Eply?</h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Slimmer werken aan je e-mails, zonder in te leveren op kwaliteit
+            Minder werken aan je e-mails, zonder kwaliteitsverlies
           </p>
         </div>
 
@@ -49,10 +49,10 @@ export default function WhyEply() {
         <div className="mt-16 bg-white rounded-2xl p-12 shadow-xl border border-gray-100">
           <div className="max-w-3xl mx-auto text-center space-y-6">
             <h3 className="text-3xl font-bold text-[#0B1220]">
-              Klaar om je inbox te transformeren?
+              Doe toekomst mailt slimmer -- jij ook?
             </h3>
             <p className="text-xl text-gray-600">
-              Sluit je aan bij bedrijven die al duizenden uren besparen
+              Probeer het zelf. Je mailbox zal nooit meer hetzelfde zijn.
             </p>
             <button
               onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}

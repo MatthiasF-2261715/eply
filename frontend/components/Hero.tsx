@@ -16,11 +16,10 @@ export default function Hero() {
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-8">
             <h1 className="text-5xl lg:text-6xl font-bold text-[#0B1220] leading-tight">
-              E-mails beantwoorden op <span className="text-[#3B82F6]">autopilot</span>
+              Waar AI stopt met praten als een <span className="text-[#3B82F6]">robot</span>
             </h1>
             <p className="text-xl text-gray-600 leading-relaxed">
               Eply analyseert je inkomende e-mails en stelt direct professionele concepten voor — in jouw toon.
-              Jij beslist, wij typen.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <button
@@ -31,7 +30,7 @@ export default function Hero() {
                 <ArrowRight className="w-5 h-5" />
               </button>
               <button
-                onClick={() => document.getElementById('over-eply')?.scrollIntoView({ behavior: 'smooth' })}
+                onClick={() => document.getElementById('wat-is-eply')?.scrollIntoView({ behavior: 'smooth' })}
                 className="border-2 border-[#3B82F6] text-[#3B82F6] px-8 py-4 rounded-full hover:bg-blue-50 transition-all text-lg font-semibold"
               >
                 Hoe het werkt
@@ -51,7 +50,7 @@ export default function Hero() {
                   <div className="flex items-start gap-3">
                     <div className="flex-1">
                       <p className="font-semibold text-[#0B1220] mb-1">Nieuwe offerte-aanvraag</p>
-                      <p className="text-sm text-gray-600">Van: klant@bedrijf.nl</p>
+                      <p className="text-sm text-gray-600">Van: klant@bedrijf.be</p>
                     </div>
                     <Sparkles className="w-5 h-5 text-[#10B981] animate-pulse" />
                   </div>
@@ -76,7 +75,7 @@ export default function Hero() {
                   <div className="flex items-start gap-3">
                     <div className="flex-1">
                       <p className="font-semibold text-[#0B1220] mb-1">Vergaderbevestiging</p>
-                      <p className="text-sm text-gray-600">Van: team@partner.nl</p>
+                      <p className="text-sm text-gray-600">Van: team@partner.be</p>
                     </div>
                   </div>
                 </div>

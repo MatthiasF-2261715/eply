@@ -8,12 +8,8 @@ export default function About() {
           <div className="space-y-8">
             <h2 className="text-4xl font-bold text-[#0B1220]">Over ons</h2>
             <p className="text-xl text-gray-600 leading-relaxed">
-              Eply is geboren uit frustratie. Als ondernemers besteedden we uren aan het beantwoorden
-              van terugkerende e-mails. We wisten: dit kan slimmer.
-            </p>
-            <p className="text-lg text-gray-600 leading-relaxed">
-              Met Eply combineren we de nieuwste AI-technologie met een persoonlijke touch.
-              Het resultaat? Een tool die écht werkt, tijd bespaart én jouw stem behoudt.
+              We zijn twee jonge ondernemers die genoeg hadden van onpersoonlijke chatbots, standaardoplossingen en het eindeloze
+               tijdverlies aan mails. Wij helpen bedrijven tijd te besparen zonder dat hun klanten het verschil merken.
             </p>
 
             <div className="space-y-6 pt-4">
@@ -24,7 +20,8 @@ export default function About() {
                 <div>
                   <h3 className="text-xl font-bold text-[#0B1220] mb-2">Onze missie</h3>
                   <p className="text-gray-600">
-                    E-mailcommunicatie toegankelijk en efficiënt maken voor elke ondernemer.
+                    Eply helpt bedrijven om tijd te winnen zonder menselijkheid te verliezen, met AI-conceptantwoorden
+                     die op maat zijn van de stijl en waarden van elk bedrijf, zodat medewerkers enkel hoeven te reviewen en aan te vullen.
                   </p>
                 </div>
               </div>
@@ -36,8 +33,9 @@ export default function About() {
                 <div>
                   <h3 className="text-xl font-bold text-[#0B1220] mb-2">Onze visie</h3>
                   <p className="text-gray-600">
-                    Een wereld waarin iedereen zich kan focussen op wat hij of zij het beste doet,
-                    zonder verloren te gaan in de inbox.
+                    Wij geloven in een wereld waar AI onzichtbaar aanwezig is in elk bedrijf: niet als robot die mensen
+                     vervangt, maar als stille assistent die tijd vrijmaakt voor écht belangrijk werk. Met Eply willen we
+                      dé partner zijn die bedrijven helpt om dat waar te maken.
                   </p>
                 </div>
               </div>
@@ -50,7 +48,7 @@ export default function About() {
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#3B82F6] to-[#10B981]"></div>
                   <div>
-                    <h4 className="font-bold text-[#0B1220] text-lg">Yelle & Team</h4>
+                    <h4 className="font-bold text-[#0B1220] text-lg">Yelle & Matthias</h4>
                     <p className="text-gray-600">Co-founders Eply</p>
                   </div>
                 </div>

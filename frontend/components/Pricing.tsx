@@ -6,7 +6,7 @@ export default function Pricing() {
   const plans = [
     {
       name: 'Starter',
-      price: '€49',
+      price: '€20',
       period: '/maand',
       description: 'Perfect voor kleine ondernemers',
       features: [
