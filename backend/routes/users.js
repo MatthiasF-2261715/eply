@@ -115,16 +115,9 @@ router.post('/ai/reply', isAuthenticated, async function (req, res) {
         return res.status(400).json({ error: 'Email en content zijn verplicht.' });
     }
 
-    const validation = await validateEmail(email, content);
-    console.log(validation);
-    if (!validation.valid) {
-        return res.json({
-            skip: true,
-            reason: validation.reason,
-            message: validation.reason === 'no-reply' 
-                ? 'Dit is een no-reply email adres.'
-                : 'Deze email lijkt geautomatiseerd of spam te zijn.'
-        });
+    const isValid = await validateEmail(email, content);
+    if (!isValid) {
+        return res.json({ skip: true });
     }
 
     if (req.session.method === 'outlook') {
