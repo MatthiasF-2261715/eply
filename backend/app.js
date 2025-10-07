@@ -33,12 +33,16 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // allow no-origin (e.g. same-site tools or server-to-server requests)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      return callback(null, true);
+    // In productie strikte origin checking
+    if (process.env.NODE_ENV === 'production') {
+      if (allowedOrigins.includes(origin)) {
+        callback(null, origin);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
     } else {
-      return callback(new Error('CORS policy: Origin not allowed'), false);
+      // In development ook requests zonder origin toestaan voor lokaal testen
+      callback(null, origin || allowedOrigins[0]);
     }
   },
   credentials: true,
@@ -47,7 +51,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-// Ensure preflight requests are handled
 app.options('*', cors(corsOptions));
 
 app.set('trust proxy', 1);
