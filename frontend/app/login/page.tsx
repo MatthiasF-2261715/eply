@@ -1,37 +1,56 @@
 'use client';
 
 import Link from 'next/link';
+import { Mail, Server } from 'lucide-react';
 
 export default function LoginPage() {
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
-  
+
   return (
-    <main className="min-h-screen flex items-center justify-center">
-      <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-md">
-        <h1 className="text-3xl font-bold mb-6 text-center text-blue-700">Login</h1>
-        <div className="flex flex-col gap-4">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white pt-24 pb-20 px-4">
+      <div className="max-w-md mx-auto">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-[#0B1220] mb-3">Inloggen</h1>
+          <p className="text-gray-600">Kies je voorkeursmethode om in te loggen</p>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 space-y-4">
           <button
             type="button"
-            onClick={() => window.location.href = `${BACKEND_URL}/auth/outlook-login`}
-            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition"
+            onClick={() => (window.location.href = `${BACKEND_URL}/auth/outlook-login`)}
+            className="w-full bg-[#0078D4] text-white py-4 px-6 rounded-xl hover:bg-[#106EBE] transition-all hover:-translate-y-1 shadow-lg hover:shadow-xl flex items-center justify-center gap-3 text-lg font-semibold"
           >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-            </svg>
+            <Mail className="w-6 h-6" />
             Inloggen met Outlook
           </button>
-          <Link href="/imap" legacyBehavior>
-            <a
-              className="flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-3 rounded-lg transition border border-gray-300"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-              </svg>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-white text-gray-500">of</span>
+            </div>
+          </div>
+
+          <Link href="/imap">
+            <a className="w-full bg-[#3B82F6] text-white py-4 px-6 rounded-xl hover:bg-[#2563EB] transition-all hover:-translate-y-1 shadow-lg hover:shadow-xl flex items-center justify-center gap-3 text-lg font-semibold">
+              <Server className="w-6 h-6" />
               Inloggen via IMAP
             </a>
           </Link>
         </div>
+
+        <p className="text-center text-gray-600 mt-6">
+          Nog geen account?{' '}
+          <button
+            onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}
+            className="text-[#3B82F6] hover:underline font-semibold"
+          >
+            Vraag een demo aan
+          </button>
+        </p>
       </div>
-    </main>
+    </div>
   );
 }

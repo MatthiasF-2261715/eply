@@ -1,28 +1,18 @@
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import "./globals.css"
-import { Navbar } from "@/components/navbar"
-import { Footer } from "@/components/footer"
+'use client';
 
-const inter = Inter({ subsets: ["latin"] })
+import React from 'react';
+import Navbar from '../components/Navbar';
+import './globals.css';
 
-export const metadata: Metadata = {
-  title: "Eply",
-  description: "AI die conceptantwoorden voor je mails voorbereidt, zodat jij enkel nog hoeft te reviewen en verzenden.",
-}
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="nl">
-      <body className={inter.className + " bg-[#f1f0ee]"}>
-        <Navbar />
-        <main>{children}</main>
-        <Footer />
+      <body>
+        <div className="min-h-screen bg-white">
+          <Navbar />
+          <main>{children}</main>
+        </div>
       </body>
     </html>
-  )
+  );
 }

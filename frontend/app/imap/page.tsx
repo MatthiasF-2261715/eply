@@ -1,13 +1,16 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Server, Mail, Lock, Hash } from 'lucide-react';
 
 export default function ImapLoginPage() {
+  const router = useRouter();
   const [form, setForm] = useState({
-    email: '',
-    password: '',
     imapServer: '',
     port: '',
+    email: '',
+    password: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -27,77 +30,121 @@ export default function ImapLoginPage() {
       setLoading(false);
       return;
     }
+
     try {
       const res = await fetch(`${BACKEND_URL}/auth/imap-login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // belangrijk voor cookies/sessie
-        body: JSON.stringify(form),
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+          imapServer: form.imapServer,
+          port: form.port,
+        }),
       });
-      const data = await res.json();
-      console.log(data);
+
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        // Succesvol ingelogd, eventueel redirecten
-        window.location.href = '/dashboard';
+        router.push('/dashboard');
       } else {
         setError(data.error || 'Inloggen mislukt.');
       }
     } catch (err) {
       setError('Er is een fout opgetreden. Probeer opnieuw.');
     }
+
     setLoading(false);
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white shadow-lg rounded-xl p-8 w-full max-w-md flex flex-col gap-4"
-      >
-        <h1 className="text-2xl font-bold text-center text-blue-700 mb-4">IMAP Inloggen</h1>
-        <input
-          type="text"
-          name="imapServer"
-          placeholder="IMAP server (bijv. imap.gmail.com)"
-          className="border rounded-lg px-4 py-2"
-          value={form.imapServer}
-          onChange={handleChange}
-        />
-        <input
-          type="number"
-          name="port"
-          placeholder="Poort (bijv. 993)"
-          className="border rounded-lg px-4 py-2"
-          value={form.port}
-          onChange={handleChange}
-        />
-        <input
-          type="email"
-          name="email"
-          placeholder="E-mailadres"
-          className="border rounded-lg px-4 py-2"
-          value={form.email}
-          onChange={handleChange}
-        />
-        <input
-          type="password"
-          name="password"
-          placeholder="Wachtwoord"
-          className="border rounded-lg px-4 py-2"
-          value={form.password}
-          onChange={handleChange}
-        />
-        {error && <div className="text-red-500 text-sm">{error}</div>}
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition"
-        >
-          {loading ? 'Bezig met inloggen...' : 'Inloggen'}
-        </button>
-      </form>
-    </main>
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white pt-24 pb-20 px-4">
+      <div className="max-w-md mx-auto">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-[#0B1220] mb-3">IMAP Configuratie</h1>
+          <p className="text-gray-600">Vul je IMAP-gegevens in om te verbinden</p>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label className="block text-sm font-semibold text-[#0B1220] mb-2">
+                IMAP Server *
+              </label>
+              <div className="relative">
+                <Server className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  name="imapServer"
+                  value={form.imapServer}
+                  onChange={handleChange}
+                  required
+                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none transition-all"
+                  placeholder="imap.gmail.com"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-[#0B1220] mb-2">Port *</label>
+              <div className="relative">
+                <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  name="port"
+                  value={form.port}
+                  onChange={handleChange}
+                  required
+                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none transition-all"
+                  placeholder="993"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-[#0B1220] mb-2">E-mail *</label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  required
+                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none transition-all"
+                  placeholder="jouw@email.nl"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-[#0B1220] mb-2">Wachtwoord *</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="password"
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  required
+                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none transition-all"
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+
+            {error && <div className="text-red-500 text-sm">{error}</div>}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#3B82F6] text-white py-4 rounded-xl hover:bg-[#2563EB] transition-all hover:-translate-y-1 shadow-lg hover:shadow-xl font-semibold text-lg disabled:opacity-60"
+            >
+              {loading ? 'Bezig met verbinden...' : 'Verbinden'}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
   );
 }
