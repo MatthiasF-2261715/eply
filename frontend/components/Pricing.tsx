@@ -1,3 +1,5 @@
+"use client";
+
 import { Check, Star } from 'lucide-react';
 
 export default function Pricing() {

@@ -1,3 +1,5 @@
+"use client";
+
 import { Clock, MessageSquare, Shield } from 'lucide-react';
 
 export default function WhyEply() {

@@ -1,3 +1,5 @@
+"use client";
+
 import { ArrowRight, Inbox, Sparkles } from 'lucide-react';
 
 export default function Hero() {
