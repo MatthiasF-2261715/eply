@@ -1,4 +1,3 @@
-const spamassassin = require('spamassassin');
 const { OpenAI } = require('openai');
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -16,34 +15,25 @@ function isNoReplyAddress(email) {
   return noReplyPatterns.some(pattern => pattern.test(email));
 }
 
-async function checkSpamScore(emailContent) {
-  return new Promise((resolve, reject) => {
-    spamassassin.score(emailContent, (error, score) => {
-      if (error) return reject(error);
-      // Typically emails with scores > 5 are considered spam
-      resolve(score > 5);
-    });
-  });
-}
-
 async function checkWithAI(emailContent) {
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [{
         role: "system",
-        content: "Analyze if this email is spam or automated. Return only 'true' for spam/automated or 'false' for legitimate personal email."
+        content: "Analyze if this email appears to be spam, automated, or a marketing message. Consider factors like: promotional language, impersonal greetings, bulk mail indicators, generic content, etc. Return JSON with format: {\"isSpam\": boolean, \"reason\": string}"
       }, {
         role: "user",
         content: emailContent
       }],
-      max_tokens: 10
+      response_format: { type: "json_object" }
     });
     
-    return completion.choices[0].message.content.trim().toLowerCase() === 'true';
+    const result = JSON.parse(completion.choices[0].message.content);
+    return result;
   } catch (error) {
-    console.error('AI spam check error:', error);
-    return false;
+    console.error('AI check error:', error);
+    return { isSpam: false, reason: 'error-checking' };
   }
 }
 
@@ -56,15 +46,13 @@ async function validateEmail(emailAddress, emailContent) {
   }
 
   try {
-    const [isSpam, isAutomated] = await Promise.all([
-      checkSpamScore(emailContent),
-      checkWithAI(emailContent)
-    ]);
+    const aiCheck = await checkWithAI(emailContent);
 
-    if (isSpam || isAutomated) {
+    if (aiCheck.isSpam) {
       return {
         valid: false,
-        reason: isSpam ? 'spam' : 'automated'
+        reason: 'automated',
+        details: aiCheck.reason
       };
     }
 
@@ -73,7 +61,6 @@ async function validateEmail(emailAddress, emailContent) {
     };
   } catch (error) {
     console.error('Email validation error:', error);
-    // Bij twijfel laten we de email door
     return { valid: true };
   }
 }
