@@ -7,8 +7,9 @@ import { Mail } from 'lucide-react';
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
   const pathname = usePathname();
-  const isLandingPage = pathname === '/';
 
   useEffect(() => {
     const handleScroll = () => {
@@ -18,7 +19,23 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+    fetch(`${backendUrl}/users/profile`, { credentials: 'include' })
+      .then(res => {
+        if (res.status === 200) {
+          setIsAuthenticated(true);
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
   const scrollToSection = (id: string) => {
+    if (pathname !== '/') {
+      window.location.href = `/#${id}`;
+      return;
+    }
     const element = document.getElementById(id);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
@@ -40,46 +57,53 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {isLandingPage && (
-            <div className="hidden md:flex items-center justify-center space-x-8">
-              <button
-                onClick={() => scrollToSection('home')}
-                className="text-[#0B1220] hover:text-[#3B82F6] transition-colors"
-              >
-                Home
-              </button>
-              <button
-                onClick={() => scrollToSection('over-eply')}
-                className="text-[#0B1220] hover:text-[#3B82F6] transition-colors"
-              >
-                Over Eply
-              </button>
-              <button
-                onClick={() => scrollToSection('prijzen')}
-                className="text-[#0B1220] hover:text-[#3B82F6] transition-colors"
-              >
-                Prijzen
-              </button>
-              <button
-                onClick={() => scrollToSection('contact')}
-                className="text-[#0B1220] hover:text-[#3B82F6] transition-colors"
-              >
-                Contact
-              </button>
-            </div>
-          )}
+          <div className="hidden md:flex items-center justify-center space-x-8">
+            <button
+              onClick={() => scrollToSection('home')}
+              className="text-[#0B1220] hover:text-[#3B82F6] transition-colors"
+            >
+              Home
+            </button>
+            <button
+              onClick={() => scrollToSection('over-eply')}
+              className="text-[#0B1220] hover:text-[#3B82F6] transition-colors"
+            >
+              Over Eply
+            </button>
+            <button
+              onClick={() => scrollToSection('prijzen')}
+              className="text-[#0B1220] hover:text-[#3B82F6] transition-colors"
+            >
+              Prijzen
+            </button>
+            <button
+              onClick={() => scrollToSection('contact')}
+              className="text-[#0B1220] hover:text-[#3B82F6] transition-colors"
+            >
+              Contact
+            </button>
+          </div>
 
           <div className="flex items-center justify-end space-x-4">
-              <Link href="/login" className="text-[#0B1220] hover:text-[#3B82F6] transition-colors font-medium">
-                Login
-              </Link>
-            {isLandingPage && (
-              <button
-                onClick={() => scrollToSection('contact')}
+            {!loading && !isAuthenticated ? (
+              <>
+                <Link href="/login" className="text-[#0B1220] hover:text-[#3B82F6] transition-colors font-medium">
+                  Login
+                </Link>
+                <button
+                  onClick={() => scrollToSection('contact')}
+                  className="bg-[#3B82F6] text-white px-6 py-2 rounded-full hover:bg-[#2563EB] transition-all hover:-translate-y-0.5 shadow-lg hover:shadow-xl"
+                >
+                  Boek een Demo
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/dashboard"
                 className="bg-[#3B82F6] text-white px-6 py-2 rounded-full hover:bg-[#2563EB] transition-all hover:-translate-y-0.5 shadow-lg hover:shadow-xl"
               >
-                Probeer gratis demo
-              </button>
+                Dashboard
+              </Link>
             )}
           </div>
         </div>

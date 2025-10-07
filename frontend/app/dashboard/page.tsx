@@ -243,7 +243,7 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-[#0B1220] flex items-center gap-3">
+            <h1 className="text-3xl font-bold flex items-center gap-3">
               <Mail className="w-8 h-8 text-[#3B82F6]" />
               Recente E-mail Activiteit
             </h1>
@@ -283,7 +283,7 @@ export default function Dashboard() {
                 <div key={emailKey} className="p-6 hover:bg-blue-50/50 transition-colors group">
                   <div className="flex items-start justify-between gap-6">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-[#0B1220] mb-2 truncate">{subject}</h3>
+                      <h3 className="text-lg font-semibold mb-2 truncate">{subject}</h3>
                       <div className="space-y-1">
                         <p className="text-sm text-gray-600"><span className="font-medium">Van:</span> {from}</p>
                         <p className="text-sm text-gray-600 truncate"><span className="font-medium">Naar:</span> {to}</p>
