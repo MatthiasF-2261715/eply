@@ -115,7 +115,7 @@ export default function Contact() {
                     onChange={handleChange}
                     required
                     className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none transition-all"
-                    placeholder="jouw@email.nl"
+                    placeholder="jouw@email.be"
                   />
                 </div>
               </div>
@@ -133,7 +133,7 @@ export default function Contact() {
                     required
                     rows={5}
                     className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none transition-all resize-none"
-                    placeholder="Vertel ons over je situatie..."
+                    placeholder="Waarmee kunnen we jou helpen?"
                   />
                 </div>
               </div>
