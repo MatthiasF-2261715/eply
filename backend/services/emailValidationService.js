@@ -17,17 +17,15 @@ function isNoReplyAddress(email) {
 
 async function checkWithAI(emailContent) {
   try {
-    console.log(emailContent);
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [{
         role: "system",
-        content: "Analyze if this email appears to be spam, automated, or a marketing message. Consider factors like: promotional language, impersonal greetings, bulk mail indicators, generic content, etc. Return JSON with format: {\"isSpam\": boolean, \"reason\": string}"
+        content: "Analyze if this email appears to be spam, automated, or a marketing message. Consider factors like: promotional language, impersonal greetings, bulk mail indicators, generic content, etc. Respond with valid JSON only in this format: {\"isSpam\": boolean, \"reason\": string}"
       }, {
         role: "user",
         content: emailContent
-      }],
-      response_format: { type: "json_object" }
+      }]
     });
     
     const result = JSON.parse(completion.choices[0].message.content);
