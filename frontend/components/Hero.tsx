@@ -16,7 +16,7 @@ export default function Hero() {
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-8">
             <h1 className="text-5xl lg:text-6xl font-bold text-[#0B1220] leading-tight">
-              Waar AI stopt met praten als een <span className="text-[#3B82F6]">robot</span>
+              Wij maken AI weer <span className="text-[#3B82F6]">menselijk</span>
             </h1>
             <p className="text-xl text-gray-600 leading-relaxed">
               Eply analyseert je inkomende e-mails en stelt direct professionele concepten voor — in jouw toon.
