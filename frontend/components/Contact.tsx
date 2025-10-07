@@ -1,24 +1,51 @@
 "use client";
 
 import { useState } from 'react';
-import { Mail, Building, User, MessageSquare, Send } from 'lucide-react';
+import { Mail, User, MessageSquare, Send } from 'lucide-react';
+
+const WEB3FORMS_ACCESS_KEY = process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY;
+const WEB3FORMS_URL = 'https://api.web3forms.com/submit';
 
 export default function Contact() {
   const [formData, setFormData] = useState({
     name: '',
-    company: '',
     email: '',
     message: '',
   });
-  const [submitted, setSubmitted] = useState(false);
+  const [status, setStatus] = useState<{ type: 'idle' | 'loading' | 'success' | 'error'; msg?: string }>({ type: 'idle' });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => {
-      setFormData({ name: '', company: '', email: '', message: '' });
-      setSubmitted(false);
-    }, 3000);
+    if (!formData.name || !formData.email || !formData.message) {
+      setStatus({ type: 'error', msg: 'Vul naam, e-mail en bericht in.' });
+      return;
+    }
+    setStatus({ type: 'loading' });
+
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('access_key', WEB3FORMS_ACCESS_KEY || '');
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('email', formData.email);
+      formDataToSend.append('message', formData.message);
+      formDataToSend.append('botcheck', '');
+
+      const res = await fetch(WEB3FORMS_URL, {
+        method: 'POST',
+        body: formDataToSend,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Versturen mislukt.');
+      }
+
+      setStatus({ type: 'success', msg: 'Bericht verstuurd. We nemen snel contact op.' });
+      setFormData({ name: '', email: '', message: '' });
+    } catch (err: any) {
+      setStatus({ type: 'error', msg: err.message || 'Er ging iets mis.' });
+    }
   };
 
   const handleChange = (
@@ -40,7 +67,7 @@ export default function Contact() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-2xl p-8 md:p-12 border border-gray-100">
-          {submitted ? (
+          {status.type === 'success' ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 bg-[#10B981] rounded-full flex items-center justify-center mx-auto mb-6">
                 <Send className="w-8 h-8 text-white" />
@@ -54,41 +81,24 @@ export default function Contact() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-[#0B1220] mb-2">
-                    Naam *
-                  </label>
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      required
-                      className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none transition-all"
-                      placeholder="Jouw naam"
-                    />
-                  </div>
-                </div>
+              <input type="hidden" name="access_key" value={WEB3FORMS_ACCESS_KEY || ''} />
+              <input type="checkbox" name="botcheck" className="hidden" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
 
-                <div>
-                  <label className="block text-sm font-semibold text-[#0B1220] mb-2">
-                    Bedrijf *
-                  </label>
-                  <div className="relative">
-                    <Building className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="text"
-                      name="company"
-                      value={formData.company}
-                      onChange={handleChange}
-                      required
-                      className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none transition-all"
-                      placeholder="Bedrijfsnaam"
-                    />
-                  </div>
+              <div>
+                <label className="block text-sm font-semibold text-[#0B1220] mb-2">
+                  Naam *
+                </label>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    required
+                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none transition-all"
+                    placeholder="Jouw naam"
+                  />
                 </div>
               </div>
 
@@ -112,7 +122,7 @@ export default function Contact() {
 
               <div>
                 <label className="block text-sm font-semibold text-[#0B1220] mb-2">
-                  Bericht
+                  Bericht *
                 </label>
                 <div className="relative">
                   <MessageSquare className="absolute left-4 top-4 w-5 h-5 text-gray-400" />
@@ -120,6 +130,7 @@ export default function Contact() {
                     name="message"
                     value={formData.message}
                     onChange={handleChange}
+                    required
                     rows={5}
                     className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none transition-all resize-none"
                     placeholder="Vertel ons over je situatie..."
@@ -127,11 +138,16 @@ export default function Contact() {
                 </div>
               </div>
 
+              {status.type === 'error' && (
+                <div className="text-sm text-red-600">{status.msg}</div>
+              )}
+
               <button
                 type="submit"
+                disabled={status.type === 'loading'}
                 className="w-full bg-[#3B82F6] text-white py-4 rounded-xl hover:bg-[#2563EB] transition-all hover:-translate-y-1 shadow-lg hover:shadow-xl font-semibold text-lg flex items-center justify-center gap-2"
               >
-                Verstuur aanvraag
+                {status.type === 'loading' ? 'Verzenden...' : 'Verstuur aanvraag'}
                 <Send className="w-5 h-5" />
               </button>
             </form>
