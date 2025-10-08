@@ -56,7 +56,6 @@ export default function RootLayout({
             cursor: "pointer",
           }}
           contentStyle={{
-            margin: "0",
             color: "white",
             flex: "1",
             maxWidth: "1200px",
