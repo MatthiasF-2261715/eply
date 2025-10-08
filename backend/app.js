@@ -29,6 +29,7 @@ const pool = new Pool({
 app.use(cors({
   origin: [
     'http://localhost:3000',
+    'https://eplydevelopment.vercel.app',
     'https://www.eply.be'
   ],
   credentials: true,
