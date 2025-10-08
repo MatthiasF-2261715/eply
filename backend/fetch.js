@@ -17,7 +17,6 @@ async function fetch(endpoint, accessToken) {
         }
     };
 
-    console.log(`request made to ${endpoint} at: ` + new Date().toString());
 
     try {
         const response = await axios.get(endpoint, options);

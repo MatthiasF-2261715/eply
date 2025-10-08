@@ -5,7 +5,6 @@ const pool = new Pool({
 });
 
 async function getUserIdByEmail(email) {
-  console.log('Fetching user ID for email:', email);
   if (!email) throw new Error('Email is required');
   const userResult = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
   if (userResult.rows.length === 0) {

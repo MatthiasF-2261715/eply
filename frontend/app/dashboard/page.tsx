@@ -38,9 +38,7 @@ export default function Dashboard() {
             } catch {
               router.replace(target);
             }
-        } else {
-          console.log('User is whitelisted');
-        }
+        } 
       })
       .catch(() => {
         const target = `${BACKEND_URL}/auth/signoutContact`;
@@ -66,7 +64,6 @@ export default function Dashboard() {
           router.replace('/');
         } else {
           const data = await res.json();
-          console.log('User profile data:', data);
           if (isMounted) setUsername(data.username);
         }
       })
@@ -94,7 +91,6 @@ export default function Dashboard() {
 
     setLoadingReplies(prev => new Set(prev).add(emailId));
 
-    console.log('Geselecteerde e-mail voor antwoord:', targetEmail);
 
     // Handle different email formats (IMAP vs Outlook)
     const emailAddress = targetEmail.from?.emailAddress?.address || targetEmail.from;
@@ -103,7 +99,6 @@ export default function Dashboard() {
     const originalMailId = targetEmail.id || '';
 
     if (!emailAddress || !title || !content) {
-      console.log('Geen geldig e-mailadres of content gevonden.');
       setLoadingReplies(prev => {
         const newSet = new Set(prev);
         newSet.delete(emailId);
@@ -112,14 +107,7 @@ export default function Dashboard() {
       return;
     }
 
-    try {
-      console.log('Verzoek verzenden naar AI Reply endpoint met payload:', {
-        email: emailAddress,
-        title: title,
-        content: content,
-        originalMailId: originalMailId
-      });
-      
+    try {      
       const response = await fetch(`${BACKEND_URL}/users/ai/reply`, { 
         method: 'POST',
         headers: {
@@ -142,7 +130,6 @@ export default function Dashboard() {
       const data = await response.json();
 
       if (data.skip) {
-        console.log('Email overgeslagen:', data.reason);
         return;
       }
       
@@ -176,7 +163,6 @@ export default function Dashboard() {
         } else {
           const data = await res.json();
           const newEmails = Array.isArray(data) ? data : data.mails || [];
-          console.log('Parsed emails:', newEmails);
           setEmails(newEmails);
 
           if (newEmails.length > 0) {
@@ -187,7 +173,6 @@ export default function Dashboard() {
             if (!isInitialLoad.current && 
                 emailTime > lastCheckTime && 
                 !processedEmailIds.has(latestEmail.id)) {
-              console.log('Nieuwe email gevonden, genereer antwoord...');
               await handleGenerateReply(latestEmail);
               // Add email ID to processed set
               setProcessedEmailIds(prev => new Set(prev).add(latestEmail.id));

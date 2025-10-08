@@ -73,7 +73,6 @@ router.post('/imap-login', async (req, res) => {
                 // Ignore cleanup errors
             }
             if (connectionAttempts < maxAttempts) {
-                console.log(`[IMAP] Timeout - Retrying connection (${connectionAttempts}/${maxAttempts})`);
                 setTimeout(attemptConnection, 3000);
             } else {
                 res.status(408).json({ 

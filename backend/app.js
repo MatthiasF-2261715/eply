@@ -17,7 +17,6 @@ const app = express();
 const { Pool } = require('pg');
 
 const isProduction = process.env.NODE_ENV === 'production';
-console.log(`Running in ${isProduction ? 'production' : 'development'} mode`);
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -86,7 +85,6 @@ app.use(function (err, req, res, next) {
       // Listen on all interfaces for Railway
       const port = process.env.PORT || 4000;
       app.listen(port, '0.0.0.0', () => {
-        console.log(`Server running on port ${port}`);
       });
     })
     .catch(err => {

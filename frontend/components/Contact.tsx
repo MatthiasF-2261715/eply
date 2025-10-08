@@ -3,9 +3,6 @@
 import { useState } from 'react';
 import { Mail, User, MessageSquare, Send } from 'lucide-react';
 
-const WEB3FORMS_ACCESS_KEY = process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY;
-const WEB3FORMS_URL = 'https://api.web3forms.com/submit';
-
 export default function Contact() {
   const [formData, setFormData] = useState({
     name: '',
@@ -24,15 +21,14 @@ export default function Contact() {
 
     try {
       const formDataToSend = new FormData();
-      formDataToSend.append('access_key', WEB3FORMS_ACCESS_KEY || '');
       formDataToSend.append('name', formData.name);
       formDataToSend.append('email', formData.email);
       formDataToSend.append('message', formData.message);
       formDataToSend.append('botcheck', '');
 
-      const res = await fetch(WEB3FORMS_URL, {
+      const res = await fetch('/api/contact', {
         method: 'POST',
-        body: formDataToSend,
+        body: formDataToSend
       });
 
       const data = await res.json();
@@ -81,7 +77,6 @@ export default function Contact() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
-              <input type="hidden" name="access_key" value={WEB3FORMS_ACCESS_KEY || ''} />
               <input type="checkbox" name="botcheck" className="hidden" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
 
               <div>

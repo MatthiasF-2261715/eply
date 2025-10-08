@@ -171,7 +171,6 @@ function formatAiReplyForHtml(aiReply) {
 }
 
 async function createOutlookDraft(session, ai_reply, mail_id) {
-    console.log("ai reply:", ai_reply);
     if (!session?.accessToken) {
         throw new Error('No access token available');
     }

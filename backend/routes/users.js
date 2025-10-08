@@ -14,9 +14,7 @@ router.get('/id', isAuthenticated, async (req, res) => {
 });
 
 router.get('/profile', isAuthenticated, async function (req, res, next) {
-    console.log('Fetching profile for session method:', req.session.method);
     if (req.session.method === 'outlook') {
-        console.log('Using Outlook session for profile');
         try {
             if (!req.session.accessToken) {
                 return res.status(401).json({ error: 'No access token in session' });
@@ -46,7 +44,6 @@ router.get('/profile', isAuthenticated, async function (req, res, next) {
             res.status(500).json({ error: 'Error fetching profile' });
         }
     } else if (req.session.method === 'imap') {
-        console.log('Using IMAP session for profile');
         if (!req.session.imap) {
             return res.status(401).json({ error: 'Niet ingelogd via IMAP.' });
         }
@@ -110,7 +107,6 @@ router.get('/isWhitelisted', isAuthenticated, async (req,res) => {
 router.post('/ai/reply', isAuthenticated, async function (req, res) {
     let { email, title, content, originalMailId } = req.body;
     const sessionEmail = getSessionEmail(req);
-    console.log('AI reply request:', { email, title, content, originalMailId });
     if (!email || !content) {
         return res.status(400).json({ error: 'Email en content zijn verplicht.' });
     }
@@ -122,10 +118,8 @@ router.post('/ai/reply', isAuthenticated, async function (req, res) {
 
     if (req.session.method === 'outlook') {
         content = filterHtmlContent(content);
-        console.log('Filtered HTML content for Outlook:', content);
     }
 
-    console.log('Extracted email:', content);
     try {
         const sentEmails = await getSentEmails(req.session.method, req.session);
         const assistantObj = await getAssistantByEmail(sessionEmail);
@@ -134,16 +128,12 @@ router.post('/ai/reply', isAuthenticated, async function (req, res) {
         const currentEmail = { from: content, title };
         const aiResponse = await useAssistant(assistantId, currentEmail, sentEmails);
         
-        console.log('AI response generated successfully: ', aiResponse);
         
         if (originalMailId) {
-            console.log('Creating draft using method:', req.session.method);
             if (req.session.method === 'imap') {
                 await createImapDraft(req.session, aiResponse, originalMailId, content);
-                console.log('IMAP draft created successfully');
             } else if (req.session.method === 'outlook') {
                 await createOutlookDraft(req.session, aiResponse, originalMailId);
-                console.log('Outlook draft created successfully');
             }
         }
         
