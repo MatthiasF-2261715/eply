@@ -130,7 +130,7 @@ export default function Dashboard() {
       
       if (data.skip) {
         handleError({
-          message: 'Deze e-mail is overgeslagen omdat het mogelijk spam, reclame of een automatisch gegenereerd bericht betreft.'
+          message: 'Deze e-mail is overgeslagen omdat het mogelijk spam of reclame betreft.'
         });
         return;
       }
