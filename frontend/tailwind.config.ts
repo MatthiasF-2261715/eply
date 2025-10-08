@@ -11,6 +11,7 @@ const config: Config = {
     extend: {
       animation: {
         blob: 'blob 7s infinite',
+        breathing: 'breathing 4s ease-in-out infinite',
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
@@ -104,6 +105,10 @@ const config: Config = {
           '100%': {
             transform: 'translate(0px, 0px) scale(1)',
           },
+        },
+        breathing: {
+          '0%, 100%': { transform: 'scale(1)' },
+          '50%': { transform: 'scale(1.03)' },
         },
       },
       utilities: {

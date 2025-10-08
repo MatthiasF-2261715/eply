@@ -46,7 +46,7 @@ export default function Hero() {
               </div>
 
               <div className="space-y-4">
-                <div className="bg-blue-50 p-4 rounded-xl border-l-4 border-[#3B82F6] transform hover:scale-105 transition-transform">
+                <div className="bg-blue-50 p-4 rounded-xl border-l-4 border-[#3B82F6] animate-breathing hover:scale-105 transition-transform">
                   <div className="flex items-start gap-3">
                     <div className="flex-1">
                       <p className="font-semibold text-[#0B1220] mb-1">Nieuwe offerte-aanvraag</p>
