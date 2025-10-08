@@ -1,4 +1,3 @@
-js
 const logger = require('../services/loggingService');
 
 const errorHandler = (err, req, res, next) => {

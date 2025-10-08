@@ -15,27 +15,37 @@ export default function Contact() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    if (!formData.name || !formData.email || !formData.message) {
+      setStatus({ type: 'error', msg: 'Vul naam, e-mail en bericht in.' });
+      return;
+    }
+    setStatus({ type: 'loading' });
+
     try {
-      if (!formData.name || !formData.email || !formData.message) {
-        throw new Error('Vul naam, e-mail en bericht in.');
-      }
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('email', formData.email);
+      formDataToSend.append('message', formData.message);
+      formDataToSend.append('botcheck', '');
 
       const res = await fetch('/api/contact', {
         method: 'POST',
-        body: new FormData(e.target as HTMLFormElement)
+        body: formDataToSend
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : null;
 
       if (!res.ok || !data?.success) {
         throw new Error(data?.message || 'Versturen mislukt.');
       }
 
       handleSuccess('Bericht verstuurd. We nemen snel contact op.');
+      setStatus({ type: 'success' });
       setFormData({ name: '', email: '', message: '' });
-    } catch (err) {
+    } catch (err: any) {
       handleError(err);
+      setStatus({ type: 'error', msg: err.message || 'Er ging iets mis.' });
     }
   };
 
