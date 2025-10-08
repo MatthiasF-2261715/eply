@@ -65,7 +65,7 @@ export default function Navbar() {
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-3 items-center h-20"> 
+        <div className="flex items-center justify-between h-20"> {/* Changed from grid to flex */}
           <div className="flex-shrink-0">
             <Link href="/" className="flex items-center space-x-2">
               <Image
@@ -78,34 +78,36 @@ export default function Navbar() {
             </Link>
           </div>
 
-          <div className="hidden md:flex items-center justify-center space-x-8">
-            <button
-              onClick={() => scrollToSection('home')}
-              className="text-[#0B1220] hover:text-[#3B82F6] transition-colors"
-            >
-              Home
-            </button>
-            <button
-              onClick={() => scrollToSection('over-eply')}
-              className="text-[#0B1220] hover:text-[#3B82F6] transition-colors"
-            >
-              Over Eply
-            </button>
-            <button
-              onClick={() => scrollToSection('prijzen')}
-              className="text-[#0B1220] hover:text-[#3B82F6] transition-colors"
-            >
-              Prijzen
-            </button>
-            <button
-              onClick={() => scrollToSection('contact')}
-              className="text-[#0B1220] hover:text-[#3B82F6] transition-colors"
-            >
-              Contact
-            </button>
+          <div className="hidden md:flex items-center justify-center space-x-8 flex-1"> {/* Added flex-1 */}
+            <div className="flex justify-center space-x-8 w-full"> {/* Added wrapper div */}
+              <button
+                onClick={() => scrollToSection('home')}
+                className="text-[#0B1220] hover:text-[#3B82F6] transition-colors"
+              >
+                Home
+              </button>
+              <button
+                onClick={() => scrollToSection('over-eply')}
+                className="text-[#0B1220] hover:text-[#3B82F6] transition-colors"
+              >
+                Over Eply
+              </button>
+              <button
+                onClick={() => scrollToSection('prijzen')}
+                className="text-[#0B1220] hover:text-[#3B82F6] transition-colors"
+              >
+                Prijzen
+              </button>
+              <button
+                onClick={() => scrollToSection('contact')}
+                className="text-[#0B1220] hover:text-[#3B82F6] transition-colors"
+              >
+                Contact
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center justify-end space-x-4">
+          <div className="flex items-center space-x-4">
             {!loading && !isAuthenticated ? (
               <>
                 <Link href="/login" className="text-[#0B1220] hover:text-[#3B82F6] transition-colors font-medium">
