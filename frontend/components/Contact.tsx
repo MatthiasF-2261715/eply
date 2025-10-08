@@ -63,7 +63,7 @@ export default function Contact() {
             Klaar om te starten?
           </h2>
           <p className="text-xl text-gray-600">
-            Boek een gratis demo en ontdek wat Eply voor jou kan betekenen
+            Boek een gratis demo en ontdek wat Eply voor jou kan betekenen.
           </p>
         </div>
 

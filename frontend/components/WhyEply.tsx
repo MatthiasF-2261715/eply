@@ -27,7 +27,7 @@ export default function WhyEply() {
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold text-[#0B1220] mb-4">Waarom Eply?</h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Minder werken aan je e-mails, zonder kwaliteitsverlies
+            Minder werken aan je e-mails, zonder kwaliteitsverlies.
           </p>
         </div>
 

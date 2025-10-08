@@ -25,7 +25,7 @@ export default function HowItWorks() {
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold text-[#0B1220] mb-4">Wat is Eply?</h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            In drie simpele stappen van inbox naar professioneel antwoord
+            In drie simpele stappen van inbox naar professioneel antwoord.
           </p>
         </div>
 
