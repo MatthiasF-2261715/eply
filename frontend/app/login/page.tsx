@@ -80,12 +80,12 @@ export default function LoginPage() {
 
         <p className="text-center text-gray-600 mt-6">
           Nog geen account?{' '}
-          <button
-            onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}
+          <Link 
+            href="/#contact"
             className="text-[#3B82F6] hover:underline font-semibold"
           >
             Vraag een demo aan
-          </button>
+          </Link>
         </p>
       </div>
     </div>
