@@ -5,48 +5,43 @@ import { Check, Star } from 'lucide-react';
 export default function Pricing() {
   const plans = [
     {
-      name: 'Starter',
-      price: '€20',
+      name: 'Maandelijks',
+      price: '€22',
       period: '/maand',
-      description: 'Perfect voor kleine ondernemers',
       features: [
-        'Persoonlijke AI-assistent',
-        'Basis integraties',
-        'E-mail support',
+        'Geen setupkost',
+        'We helpen je met de eerste installatie',
+        'Conceptmails in jouw toon (geen robottaal)',
+        'Slimme filtering voor ruisvrije inbox',
       ],
-      cta: 'Start gratis',
+      cta: 'Contacteer ons',
       highlighted: false,
     },
     {
-      name: 'Team',
-      price: '€149',
+      name: 'Jaarplan',
+      price: '€20',
       period: '/maand',
-      description: 'Voor groeiende teams',
       features: [
-        'Onbeperkte e-mails',
-        'Geavanceerde AI-aanpassingen',
-        'Alle integraties',
-        'Priority support',
-        'Team management',
-        'Custom workflows',
+        'Geen setupkost',
+        'We helpen je met de eerste installatie',
+        'Conceptmails in jouw toon (geen robottaal)',
+        'Slimme filtering voor ruisvrije inbox',
+        'Voordeliger door jaarformule'
       ],
-      cta: 'Meest gekozen',
+      cta: 'Contacteer ons',
       highlighted: true,
     },
     {
       name: 'Custom',
       price: 'Op maat',
       period: '',
-      description: 'Enterprise oplossingen',
+      description: 'Vanaf 5 accounts',
       features: [
-        'Alles uit Team',
-        'Dedicated account manager',
-        'Custom AI-training',
-        'API toegang',
-        'SLA garantie',
-        'On-premise optie',
+        'Gezamenlijke onboarding & afstemming',
+        'Koppelingen op maat + workflow-advies',
+        'Voordeelprijs per account'
       ],
-      cta: 'Neem contact op',
+      cta: 'Contacteer ons',
       highlighted: false,
     },
   ];
@@ -135,6 +130,13 @@ export default function Pricing() {
               </button>
             </div>
           ))}
+        </div>
+
+        {/* extra note under pricing cards */}
+        <div className="mt-8 text-center">
+          <p className="italic text-sm text-gray-600 max-w-3xl mx-auto">
+            Prijzen per e-mailaccount, excl. btw. Jaarplan wordt vooraf gefactureerd; maandplan is maandelijks opzegbaar. <span className="font-bold">Fair Use Policy</span> van toepassing; bij uitzonderlijk of structureel hoog verbruik kunnen extra credits of opschaling gelden – transparant en in goed overleg tijdig afgestemd.
+          </p>
         </div>
       </div>
     </section>

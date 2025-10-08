@@ -66,7 +66,7 @@ export default function Footer() {
               <li>info@eply.be</li>
               <li>+32 472 36 25 18</li>
               <li>BE 1027.205.452</li>
-              <li>Herengracht 59,3665 As</li>
+              <li>Herengracht 59, 3665 As</li>
             </ul>
           </div>
         </div>
