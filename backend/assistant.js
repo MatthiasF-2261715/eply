@@ -5,6 +5,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 async function useAssistant(assistantId, currentEmail, previousEmails = []) {
   try {
+    console.log("Start AI Assistant");
     const context = formatEmailContext(currentEmail, previousEmails);
     
     const thread = await openai.beta.threads.create();
@@ -22,6 +23,7 @@ async function useAssistant(assistantId, currentEmail, previousEmails = []) {
       assistant_id: assistantId,
     });
     
+    console.log("Stop AI assistant");
     if (run.status === 'completed') {
       const messages = await openai.beta.threads.messages.list(threadId);
       for (const message of messages.data.reverse()) {
