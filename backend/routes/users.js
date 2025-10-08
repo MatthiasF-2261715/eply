@@ -108,7 +108,6 @@ router.get('/isWhitelisted', isAuthenticated, async (req,res) => {
   });
 
 router.post('/ai/reply', isAuthenticated, async function (req, res) {
-    console.log("test");
     let { email, title, content, originalMailId } = req.body;
     const sessionEmail = getSessionEmail(req);
     console.log('AI reply request:', { email, title, content, originalMailId });
