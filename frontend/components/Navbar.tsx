@@ -20,16 +20,32 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-    fetch(`${backendUrl}/users/profile`, { credentials: 'include' })
-      .then(res => {
-        if (res.status === 200) {
+    const checkAuth = async () => {
+      try {
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+        const res = await fetch(`${backendUrl}/users/profile`, { credentials: 'include' });
+        if (res.ok) {
           setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
         }
+      } catch (error) {
+        setIsAuthenticated(false);
+      } finally {
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
+      }
+    };
+
+    checkAuth();
+
+    // Add event listener for storage events
+    const handleStorageChange = () => {
+      checkAuth();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [pathname]);
 
   const scrollToSection = (id: string) => {
     if (pathname !== '/') {
