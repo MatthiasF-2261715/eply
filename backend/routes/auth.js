@@ -9,10 +9,11 @@ const authProvider = require('../auth/AuthProvider');
 const Imap = require('imap');
 const { FRONTEND_URL, BACKEND_URL, REDIRECT_URI, POST_LOGOUT_REDIRECT_URI } = require('../auth/authConfig');
 const { isUserWhitelisted } = require('../database');
+const { authLimiter, imapLimiter } = require('../middleware/rateLimiter');
 
 const router = express.Router();
 
-router.get('/outlook-login', (req, res, next) => {
+router.get('/outlook-login', authLimiter, (req, res, next) => {
     authProvider.login({
         scopes: ["openid", "profile", "User.Read", "Mail.Read", "Mail.ReadWrite"],
         redirectUri: REDIRECT_URI,
@@ -20,7 +21,7 @@ router.get('/outlook-login', (req, res, next) => {
     })(req, res, next);
 });
 
-router.post('/imap-login', async (req, res) => {
+router.post('/imap-login', imapLimiter, async (req, res) => {
     const { email, password, imapServer, port } = req.body;
     if (!email || !password || !imapServer || !port) {
         return res.status(400).json({ error: 'Vul alle velden in.' });
