@@ -128,7 +128,12 @@ export default function Dashboard() {
 
       const data = await response.json();
       
-      if (data.skip) return;
+      if (data.skip) {
+        handleError({
+          message: 'Deze e-mail is overgeslagen omdat het mogelijk spam, reclame of een automatisch gegenereerd bericht betreft.'
+        });
+        return;
+      }
       
       setCurrentReply(data.response || 'Geen antwoord ontvangen');
       setShowReplyPopup(true);
