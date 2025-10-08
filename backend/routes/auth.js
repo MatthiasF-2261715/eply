@@ -8,6 +8,7 @@ var express = require('express');
 const authProvider = require('../auth/AuthProvider');
 const Imap = require('imap');
 const { FRONTEND_URL, BACKEND_URL, REDIRECT_URI, POST_LOGOUT_REDIRECT_URI } = require('../auth/authConfig');
+const { isUserWhitelisted } = require('../database');
 
 const router = express.Router();
 
@@ -23,6 +24,19 @@ router.post('/imap-login', async (req, res) => {
     const { email, password, imapServer, port } = req.body;
     if (!email || !password || !imapServer || !port) {
         return res.status(400).json({ error: 'Vul alle velden in.' });
+    }
+
+    try {
+        const whitelisted = await isUserWhitelisted(email);
+        if (!whitelisted) {
+            return res.status(403).json({ 
+                error: 'Geen toegang. Neem contact op met de beheerder.',
+                redirectUrl: `${FRONTEND_URL}/#contact`
+            });
+        }
+    } catch (err) {
+        console.error('[Whitelist] Error:', err);
+        return res.status(500).json({ error: 'Fout bij controleren toegang.' });
     }
 
     const imap = new Imap({
