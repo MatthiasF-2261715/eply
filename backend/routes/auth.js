@@ -9,11 +9,11 @@ const authProvider = require('../auth/AuthProvider');
 const Imap = require('imap');
 const { FRONTEND_URL, BACKEND_URL, REDIRECT_URI, POST_LOGOUT_REDIRECT_URI } = require('../auth/authConfig');
 const { isUserWhitelisted } = require('../database');
-const { authLimiter, imapLimiter } = require('../middleware/rateLimiter');
+const { imapLimiter } = require('../middleware/rateLimiter');
 
 const router = express.Router();
 
-router.get('/outlook-login', authLimiter, (req, res, next) => {
+router.get('/outlook-login', (req, res, next) => {
     authProvider.login({
         scopes: ["openid", "profile", "User.Read", "Mail.Read", "Mail.ReadWrite"],
         redirectUri: REDIRECT_URI,
