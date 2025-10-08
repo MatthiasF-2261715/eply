@@ -1,6 +1,6 @@
 "use client";
 
-import { Mail, Linkedin, Twitter, Instagram } from 'lucide-react';
+import { Mail, Linkedin, Phone, Instagram, MapPin } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -63,10 +63,36 @@ export default function Footer() {
           <div>
             <h3 className="font-semibold mb-4">Contact</h3>
             <ul className="space-y-2 text-gray-400">
-              <li>info@eply.be</li>
-              <li>+32 472 36 25 18</li>
+              <li>
+                <a 
+                  href="mailto:info@eply.be"
+                  className="hover:text-[#3B82F6] transition-colors flex items-center gap-2"
+                >
+                  <Mail className="w-4 h-4" />
+                  info@eply.be
+                </a>
+              </li>
+              <li>
+                <a 
+                  href="tel:+32472362518"
+                  className="hover:text-[#3B82F6] transition-colors flex items-center gap-2"
+                >
+                  <Phone className="w-4 h-4" />
+                  +32 472 36 25 18
+                </a>
+              </li>
               <li>BE 1027.205.452</li>
-              <li>Herengracht 59, 3665 As</li>
+              <li>
+                <a 
+                  href="https://www.google.com/maps/search/?api=1&query=Herengracht+59,+3665+As,+Belgium"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-[#3B82F6] transition-colors flex items-center gap-2"
+                >
+                  <MapPin className="w-4 h-4" />
+                  Herengracht 59, 3665 As
+                </a>
+              </li>
             </ul>
           </div>
         </div>
