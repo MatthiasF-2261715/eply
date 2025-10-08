@@ -72,6 +72,10 @@ export default function ImapLoginPage() {
       if (res.ok) {
         router.push('/dashboard');
       } else {
+        if (data.redirectUrl) {
+          window.location.href = data.redirectUrl;
+          return;
+        }
         setError(data.error || 'Inloggen mislukt.');
       }
     } catch (err) {
