@@ -5,21 +5,38 @@ export async function POST(request: Request) {
     const data = await request.formData();
     const formData = new FormData();
     
-    // Voeg de private key server-side toe
+    // Voeg de access key toe
     formData.append('access_key', process.env.WEB3FORMS_ACCESS_KEY || '');
     
-    // Gebruik Array.from in plaats van for...of
+    // Kopieer alle form velden
     Array.from(data.entries()).forEach(([key, value]) => {
-      formData.append(key, value);
+      if (key !== 'access_key') { // Voorkom dubbele access key
+        formData.append(key, value);
+      }
     });
     
+    // Headers toevoegen voor correcte verwerking
     const response = await fetch('https://api.web3forms.com/submit', {
       method: 'POST',
+      headers: {
+        'Accept': 'application/json'
+      },
       body: formData
     });
 
-    return NextResponse.json(await response.json());
+    // Check voor geldige JSON response
+    const responseData = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(responseData.message || 'Er ging iets mis bij het versturen');
+    }
+
+    return NextResponse.json(responseData);
   } catch (error) {
-    return NextResponse.json({ error: 'Er ging iets mis' }, { status: 500 });
+    console.error('Contact form error:', error);
+    return NextResponse.json(
+      { success: false, message: 'Er ging iets mis bij het versturen' },
+      { status: 500 }
+    );
   }
 }
