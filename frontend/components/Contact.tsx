@@ -31,10 +31,11 @@ export default function Contact() {
         body: formDataToSend
       });
 
-      const data = await res.json();
+      const text = await res.text(); // Eerst als text ophalen
+      const data = text ? JSON.parse(text) : null; // Dan pas parsen
 
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Versturen mislukt.');
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.message || 'Versturen mislukt.');
       }
 
       setStatus({ type: 'success', msg: 'Bericht verstuurd. We nemen snel contact op.' });
