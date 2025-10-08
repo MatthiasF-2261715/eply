@@ -81,7 +81,6 @@ export default function Footer() {
                   +32 472 36 25 18
                 </a>
               </li>
-              <li>BE 1027.205.452</li>
               <li>
                 <a 
                   href="https://www.google.com/maps/search/?api=1&query=Herengracht+59,+3665+As,+Belgium"
@@ -93,6 +92,7 @@ export default function Footer() {
                   Herengracht 59, 3665 As
                 </a>
               </li>
+              <li>BE 1027.205.452</li>
             </ul>
           </div>
         </div>
