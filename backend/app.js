@@ -11,6 +11,7 @@ const cors = require('cors');
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
 const authRouter = require('./routes/auth');
+const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
@@ -91,3 +92,6 @@ app.use(function (err, req, res, next) {
       console.error('Database connection error:', err.stack);
       process.exit(1);
     });
+
+app.use(express.json());
+app.use(errorHandler);

@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Server, Mail, Lock, Hash } from 'lucide-react';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 export default function ImapLoginPage() {
   const router = useRouter();
+  const { handleError, handleSuccess } = useErrorHandler();
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({
     imapServer: '',
@@ -48,41 +50,32 @@ export default function ImapLoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setError('');
-    if (!form.email || !form.password || !form.imapServer || !form.port) {
-      setError('Vul alle velden in.');
-      setIsSubmitting(false);
-      return;
-    }
 
     try {
       const res = await fetch(`${BACKEND_URL}/auth/imap-login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          email: form.email,
-          password: form.password,
-          imapServer: form.imapServer,
-          port: form.port,
-        }),
+        body: JSON.stringify(form),
       });
 
-      const data = await res.json().catch(() => ({}));
+      const data = await res.json();
+      
       if (res.ok) {
+        handleSuccess('Succesvol ingelogd!');
         router.push('/dashboard');
       } else {
         if (data.redirectUrl) {
           window.location.href = data.redirectUrl;
           return;
         }
-        setError(data.error || 'Inloggen mislukt.');
+        throw new Error(data.error || 'Inloggen mislukt.');
       }
     } catch (err) {
-      setError('Er is een fout opgetreden. Probeer opnieuw.');
+      handleError(err);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setIsSubmitting(false);
   };
 
   return (

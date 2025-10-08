@@ -6,9 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Mail, Settings, BarChart3, Clock, Users, ArrowRight, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 export default function Dashboard() {
   const router = useRouter();
+  const { handleError, handleSuccess } = useErrorHandler();
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState<string | null>(null);
   const [emails, setEmails] = useState<any[]>([]);
@@ -84,13 +86,10 @@ export default function Dashboard() {
 
   const handleGenerateReply = async (emailToReply = null) => {
     const targetEmail = emailToReply || (emails.length ? emails[0] : null);
-    
     if (!targetEmail) return;
 
     const emailId = targetEmail.id || targetEmail.subject;
-
     setLoadingReplies(prev => new Set(prev).add(emailId));
-
 
     // Handle different email formats (IMAP vs Outlook)
     const emailAddress = targetEmail.from?.emailAddress?.address || targetEmail.from;
@@ -128,17 +127,14 @@ export default function Dashboard() {
       }
 
       const data = await response.json();
-
-      if (data.skip) {
-        return;
-      }
+      
+      if (data.skip) return;
       
       setCurrentReply(data.response || 'Geen antwoord ontvangen');
       setShowReplyPopup(true);
+      handleSuccess('AI antwoord gegenereerd');
     } catch (err) {
-      console.error('AI Reply Error:', err);
-      setCurrentReply(`Fout bij AI reply ophalen: ${err}`);
-      setShowReplyPopup(true);
+      handleError(err);
     } finally {
       setLoadingReplies(prev => {
         const newSet = new Set(prev);
@@ -158,35 +154,34 @@ export default function Dashboard() {
         });
 
         if (!res.ok || res.redirected) {
-          setEmailsError('Niet ingelogd of sessie verlopen.');
-          setEmails([]);
-        } else {
-          const data = await res.json();
-          const newEmails = Array.isArray(data) ? data : data.mails || [];
-          setEmails(newEmails);
+          throw new Error('Niet ingelogd of sessie verlopen.');
+        }
 
-          if (newEmails.length > 0) {
-            const latestEmail = newEmails[0];
-            const emailTime = new Date(latestEmail.date).getTime();
-            
-            // Only generate reply if email is newer than last check AND not processed before
-            if (!isInitialLoad.current && 
-                emailTime > lastCheckTime && 
-                !processedEmailIds.has(latestEmail.id)) {
-              await handleGenerateReply(latestEmail);
-              // Add email ID to processed set
-              setProcessedEmailIds(prev => new Set(prev).add(latestEmail.id));
-            }
-            
-            if (isInitialLoad.current) {
-              isInitialLoad.current = false;
-            }
-            
-            setLastCheckTime(Date.now());
+        const data = await res.json();
+        const newEmails = Array.isArray(data) ? data : data.mails || [];
+        setEmails(newEmails);
+
+        if (newEmails.length > 0) {
+          const latestEmail = newEmails[0];
+          const emailTime = new Date(latestEmail.date).getTime();
+          
+          // Only generate reply if email is newer than last check AND not processed before
+          if (!isInitialLoad.current && 
+              emailTime > lastCheckTime && 
+              !processedEmailIds.has(latestEmail.id)) {
+            await handleGenerateReply(latestEmail);
+            // Add email ID to processed set
+            setProcessedEmailIds(prev => new Set(prev).add(latestEmail.id));
           }
+          
+          if (isInitialLoad.current) {
+            isInitialLoad.current = false;
+          }
+          
+          setLastCheckTime(Date.now());
         }
       } catch (error) {
-        setEmailsError('Fout bij ophalen van e-mails.');
+        handleError(error);
         setEmails([]);
       } 
     };

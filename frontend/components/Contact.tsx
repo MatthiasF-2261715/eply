@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import { Mail, User, MessageSquare, Send } from 'lucide-react';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 export default function Contact() {
+  const { handleError, handleSuccess } = useErrorHandler();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -13,35 +15,27 @@ export default function Contact() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.email || !formData.message) {
-      setStatus({ type: 'error', msg: 'Vul naam, e-mail en bericht in.' });
-      return;
-    }
-    setStatus({ type: 'loading' });
-
+    
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('name', formData.name);
-      formDataToSend.append('email', formData.email);
-      formDataToSend.append('message', formData.message);
-      formDataToSend.append('botcheck', '');
+      if (!formData.name || !formData.email || !formData.message) {
+        throw new Error('Vul naam, e-mail en bericht in.');
+      }
 
       const res = await fetch('/api/contact', {
         method: 'POST',
-        body: formDataToSend
+        body: new FormData(e.target as HTMLFormElement)
       });
 
-      const text = await res.text(); // Eerst als text ophalen
-      const data = text ? JSON.parse(text) : null; // Dan pas parsen
+      const data = await res.json();
 
       if (!res.ok || !data?.success) {
         throw new Error(data?.message || 'Versturen mislukt.');
       }
 
-      setStatus({ type: 'success', msg: 'Bericht verstuurd. We nemen snel contact op.' });
+      handleSuccess('Bericht verstuurd. We nemen snel contact op.');
       setFormData({ name: '', email: '', message: '' });
-    } catch (err: any) {
-      setStatus({ type: 'error', msg: err.message || 'Er ging iets mis.' });
+    } catch (err) {
+      handleError(err);
     }
   };
 

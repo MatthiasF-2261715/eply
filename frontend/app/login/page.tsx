@@ -4,10 +4,12 @@ import Link from 'next/link';
 import { Mail, Server } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 export default function LoginPage() {
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
   const router = useRouter();
+  const { handleError, handleSuccess } = useErrorHandler();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -24,6 +26,14 @@ export default function LoginPage() {
         setLoading(false);
       });
   }, [BACKEND_URL, router]);
+
+  const handleOutlookLogin = () => {
+    try {
+      window.location.href = `${BACKEND_URL}/auth/outlook-login`;
+    } catch (error) {
+      handleError(error);
+    }
+  };
 
   if (loading) {
     return (
@@ -44,7 +54,7 @@ export default function LoginPage() {
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 space-y-4">
           <button
             type="button"
-            onClick={() => (window.location.href = `${BACKEND_URL}/auth/outlook-login`)}
+            onClick={handleOutlookLogin}
             className="w-full bg-[#0078D4] text-white py-4 px-6 rounded-xl hover:bg-[#106EBE] transition-all hover:-translate-y-1 shadow-lg hover:shadow-xl flex items-center justify-center gap-3 text-lg font-semibold"
           >
             <Mail className="w-6 h-6" />

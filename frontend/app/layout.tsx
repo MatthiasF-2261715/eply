@@ -3,6 +3,7 @@
 import React from 'react';
 import Navbar from '../components/Navbar';
 import './globals.css';
+import { ToastContainer } from "@/components/ui/toast-container"
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -12,6 +13,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Navbar />
           <main>{children}</main>
         </div>
+        <ToastContainer />
       </body>
     </html>
   );
