@@ -182,13 +182,19 @@ async function createOutlookDraft(session, ai_reply, mail_id) {
         const draftReply = await client
             .api(`/me/messages/${mail_id}/createReply`)
             .post();
+
+        const existingBody = draftReply.body.content;
+        console.log(existingBody);
+
         const aiReplyHtml = formatAiReplyForHtml(ai_reply);
+        const newContent = aiReplyHtml + existingBody;
+
         const updatedDraft = await client
             .api(`/me/messages/${draftReply.id}`)
             .update({
                 body: {
                     contentType: 'HTML',
-                    content: aiReplyHtml
+                    content: newContent
                 }
             });
         return updatedDraft;
