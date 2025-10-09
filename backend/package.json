@@ -12,6 +12,7 @@
     "express-rate-limit": "^8.1.0",
     "express-session": "^1.18.1",
     "he": "^1.2.0",
+    "helmet": "^8.1.0",
     "html-to-text": "^9.0.5",
     "imap": "^0.8.19",
     "imapflow": "^1.0.196",
