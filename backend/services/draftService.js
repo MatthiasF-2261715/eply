@@ -179,32 +179,28 @@ async function createOutlookDraft(session, ai_reply, mail_id) {
     }
     const client = Client.init({authProvider: (done) => done(null, session.accessToken)});
     try {
+        // Get user settings including signature
+        const mailboxSettings = await client
+            .api('/me/mailboxSettings')
+            .get();
+
+        // Create reply draft
         const draftReply = await client
             .api(`/me/messages/${mail_id}/createReply`)
             .post();
 
-        
         const aiReplyHtml = formatAiReplyForHtml(ai_reply);
+        const signature = mailboxSettings.automaticRepliesSetting?.internalReplyMessage || '';
 
-        const signature = await client
-            .api('/me/messages')
-            .post({
-                subject: "",
-                body: {
-                    contentType: "HTML",
-                    content: ""
-                }
-            });
-        
-        console.log("Signature: ");
         console.log(signature);
 
+        // Update draft with AI reply, original content, and signature
         const updatedDraft = await client
             .api(`/me/messages/${draftReply.id}`)
             .update({
                 body: {
                     contentType: "HTML",
-                    content: aiReplyHtml + signature.body.content + draftReply.body.content
+                    content: aiReplyHtml + draftReply.body.content + signature
                 }
             });
 
