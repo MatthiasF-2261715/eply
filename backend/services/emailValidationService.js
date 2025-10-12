@@ -40,7 +40,27 @@ const hamExamples = [
   'vriendelijke groeten',
   'bedankt voor je tijd',
   'afspraak',
-  'vraag'
+  'vraag',
+  'hoeveel verdien ik per uur',
+  'wat zijn de werktijden',
+  'hoe werkt het sollicitatieproces',
+  'kan ik morgen werken',
+  'hoe meld ik mij aan',
+  'wat zijn de voorwaarden',
+  'hoe kan ik contact opnemen',
+  'hoe werkt het bij jullie',
+  'kan ik meer informatie krijgen',
+  'hoe ziet een werkdag eruit',
+  'hoe word ik uitbetaald',
+  'hoe kan ik mij inschrijven',
+  'hoeveel krijg ik betaald',
+  'hoe werkt het rooster',
+  'kan ik mijn beschikbaarheid doorgeven',
+  'hoe werkt het systeem',
+  'hoe kan ik mijn gegevens aanpassen',
+  'hoe werkt het met vakantiedagen',
+  'hoe kan ik feedback geven',
+  'hoe werkt het onboardingproces'
 ];
 
 spamExamples.forEach(t => classifier.addDocument(t, 'spam'));
