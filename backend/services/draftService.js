@@ -184,6 +184,9 @@ async function createOutlookDraft(session, ai_reply, mail_id) {
         const signature = mailboxSettings.mailSignature || '';
         const signatureEnabled = mailboxSettings.mailSignatureAutomaticallyIncluded;
 
+        console.log("Signature:", signature);
+        console.log("Signature Enabled:", signatureEnabled);
+
         const draftReply = await client
             .api(`/me/messages/${mail_id}/createReply`)
             .post();
@@ -196,6 +199,7 @@ async function createOutlookDraft(session, ai_reply, mail_id) {
             bodyContent += `<br><br>${signature}`;
         }
         bodyContent += draftReply.body.content;
+        console.log("Draft Reply Body Content:", draftReply.body.content);
 
         const updatedDraft = await client
             .api(`/me/messages/${draftReply.id}`)
