@@ -268,13 +268,13 @@ export default function Dashboard() {
               <Button 
                 onClick={onClose}
                 variant="outline"
-                className="flex-1 h-11"
+                className="flex-1 h-11 rounded-full border-gray-300 text-gray-600 hover:bg-gray-50 hover:border-gray-400"
               >
                 Overslaan
               </Button>
               <Button 
                 onClick={onRetry}
-                className="flex-1 h-11 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600"
+                className="flex-1 h-11 rounded-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white"
               >
                 Toch genereren
                 <ArrowRight className="w-4 h-4 ml-2" />
