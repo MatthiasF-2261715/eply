@@ -32,7 +32,7 @@ async function isUserWhitelisted(email) {
 async function createUser(firstName, lastName, email, password) {
   const hashedPassword = await bcrypt.hash(password, 10);
   const result = await pool.query(
-    'INSERT INTO users (first, name, email, password) VALUES ($1, $2, $3, $4) RETURNING id',
+    'INSERT INTO users (first, last, email, password) VALUES ($1, $2, $3, $4) RETURNING id',
     [firstName, lastName, email, hashedPassword]
   );
   return result.rows[0].id;
