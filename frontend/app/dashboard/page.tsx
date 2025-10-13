@@ -240,29 +240,49 @@ export default function Dashboard() {
     if (!error || !error.skipError) return null;
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white p-6 rounded-lg shadow-xl max-w-2xl w-full m-4">
-          <h3 className="text-lg font-bold mb-4">Let op</h3>
-          <div className="bg-gray-50 p-4 rounded mb-4">
-            {error.message}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      >
+        <motion.div
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.95, opacity: 0 }}
+          className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden"
+        >
+          <div className="p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <Mail className="w-5 h-5 text-yellow-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900">Let op</h3>
+            </div>
+            
+            <p className="text-gray-600 mb-6">
+              {error.message}
+            </p>
+
+            <div className="flex gap-3">
+              <Button 
+                onClick={onClose}
+                variant="outline"
+                className="flex-1 h-11"
+              >
+                Overslaan
+              </Button>
+              <Button 
+                onClick={onRetry}
+                className="flex-1 h-11 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600"
+              >
+                Toch genereren
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-3">
-            <Button 
-              onClick={onClose}
-              variant="outline"
-              className="flex-1"
-            >
-              Sluiten
-            </Button>
-            <Button 
-              onClick={onRetry}
-              className="flex-1"
-            >
-              Toch genereren
-            </Button>
-          </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     );
   };
 
