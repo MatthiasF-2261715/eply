@@ -8,6 +8,18 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
 
+type ErrorType = {
+  message: string;
+  skipError: boolean;
+  retryFn?: () => void;
+} | null;
+
+type ErrorPopupProps = {
+  error: ErrorType;
+  onClose: () => void;
+  onRetry: () => void;
+};
+
 export default function Dashboard() {
   const router = useRouter();
   const { handleError, handleSuccess } = useErrorHandler();
@@ -23,6 +35,7 @@ export default function Dashboard() {
   const [loadingReplies, setLoadingReplies] = useState<Set<string>>(new Set());
   const [whitelistDone, setWhitelistDone] = useState(false);
   const [profileDone, setProfileDone] = useState(false);
+  const [error, setError] = useState<ErrorType>(null);
 
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -84,7 +97,7 @@ export default function Dashboard() {
     }
   }, [whitelistDone, profileDone]);
 
-  const handleGenerateReply = async (emailToReply = null) => {
+  const handleGenerateReply = async (emailToReply = null, force = false) => {
     const targetEmail = emailToReply || (emails.length ? emails[0] : null);
     if (!targetEmail) return;
 
@@ -117,7 +130,8 @@ export default function Dashboard() {
           email: emailAddress,
           title: title,
           content: content,
-          originalMailId: originalMailId
+          originalMailId: originalMailId,
+          force: force
         })
       });
 
@@ -129,8 +143,10 @@ export default function Dashboard() {
       const data = await response.json();
       
       if (data.skip) {
-        handleError({
-          message: 'Deze e-mail is overgeslagen omdat het mogelijk spam, reclame of een automatisch bericht betreft.'
+        setError({
+          message: 'Deze e-mail is overgeslagen omdat het mogelijk spam, reclame of een automatisch bericht betreft.',
+          skipError: true,
+          retryFn: () => handleGenerateReply(emailToReply, true)
         });
         return;
       }
@@ -220,6 +236,36 @@ export default function Dashboard() {
     );
   };
 
+  const ErrorPopup = ({ error, onClose, onRetry }: ErrorPopupProps) => {
+    if (!error || !error.skipError) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white p-6 rounded-lg shadow-xl max-w-2xl w-full m-4">
+          <h3 className="text-lg font-bold mb-4">Let op</h3>
+          <div className="bg-gray-50 p-4 rounded mb-4">
+            {error.message}
+          </div>
+          <div className="flex gap-3">
+            <Button 
+              onClick={onClose}
+              variant="outline"
+              className="flex-1"
+            >
+              Sluiten
+            </Button>
+            <Button 
+              onClick={onRetry}
+              className="flex-1"
+            >
+              Toch genereren
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -302,6 +348,16 @@ export default function Dashboard() {
         </div>
       </div>
       <ReplyPopup />
+      <ErrorPopup 
+        error={error}
+        onClose={() => setError(null)}
+        onRetry={() => {
+          if (error?.retryFn) {
+            error.retryFn();
+            setError(null);
+          }
+        }}
+      />
     </div>
   );
 }

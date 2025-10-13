@@ -105,15 +105,17 @@ router.get('/isWhitelisted', isAuthenticated, async (req,res) => {
   });
 
 router.post('/ai/reply', isAuthenticated, async function (req, res) {
-    let { email, title, content, originalMailId } = req.body;
+    let { email, title, content, originalMailId, force } = req.body;
     const sessionEmail = getSessionEmail(req);
     if (!email || !content) {
         return res.status(400).json({ error: 'Email en content zijn verplicht.' });
     }
 
-    const isValid = await validateEmail(email, content);
-    if (!isValid) {
-        return res.json({ skip: true });
+    if (!force) {
+        const isValid = await validateEmail(email, content);
+        if (!isValid) {
+            return res.json({ skip: true });
+        }
     }
 
     if (req.session.method === 'outlook') {
