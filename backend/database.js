@@ -25,7 +25,7 @@ async function getAssistantByEmail(email) {
 
 async function isUserWhitelisted(email) {
   if (!email) return false;
-  const result = await pool.query('SELECT 1 FROM users WHERE email = $1 LIMIT 1', [email]);
+  const result = await pool.query('SELECT 1 FROM whitelist WHERE email = $1 LIMIT 1', [email]);
   return result.rowCount > 0;
 }
 
