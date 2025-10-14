@@ -1,5 +1,5 @@
 const express = require('express');
-const { createUser, validateUser, isUserWhitelisted } = require('../database');
+const { createUser, validateUser, isUserWhitelisted, deleteSession } = require('../database');
 const router = express.Router();
 
 // Login route
@@ -73,13 +73,17 @@ router.post('/register', async (req, res) => {
 });
 
 // Logout route
-router.post('/logout', (req, res) => {
+router.post('/logout', async (req, res) => {
+  if (req.session.id && process.env.NODE_ENV === 'production') {
+    await deleteSession(req.session.id);
+  }
+
   req.session.destroy((err) => {
     if (err) {
       console.error('Logout error:', err);
       return res.status(500).json({ error: 'Er is een fout opgetreden' });
     }
-    res.json({ success: true });
+    res.json({ success: true, redirectUrl: process.env.FRONTEND_URL });
   });
 });
 

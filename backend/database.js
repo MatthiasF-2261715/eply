@@ -54,9 +54,31 @@ async function validateUser(email, password) {
   return validPassword ? user.id : null;
 }
 
+async function deleteSession(sessionId) {
+  try {
+    await pool.query('DELETE FROM user_sessions WHERE sid = $1', [sessionId]);
+    return true;
+  } catch (err) {
+    console.error('Error deleting session:', err);
+    return false;
+  }
+}
+
+async function cleanupExpiredSessions() {
+  try {
+    await pool.query('DELETE FROM user_sessions WHERE expire < NOW()');
+    return true;
+  } catch (err) {
+    console.error('Session cleanup error:', err);
+    return false;
+  }
+}
+
 module.exports = { 
   getAssistantByEmail, 
   isUserWhitelisted, 
   createUser,
-  validateUser
+  validateUser,
+  deleteSession,
+  cleanupExpiredSessions
 };

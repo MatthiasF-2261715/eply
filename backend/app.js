@@ -13,6 +13,7 @@ const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
 const authRouter = require('./routes/auth');
 const errorHandler = require('./middleware/errorHandler');
+const { cleanupExpiredSessions } = require('./database');
 
 const app = express();
 
@@ -121,3 +122,10 @@ app.use(function (err, req, res, next) {
       console.error('Database connection error:', err.stack);
       process.exit(1);
     });
+
+// Now daily session deletion
+if (isProduction) {
+  setInterval(async () => {
+    await cleanupExpiredSessions();
+  }, 24 * 60 * 60 * 1000);
+}

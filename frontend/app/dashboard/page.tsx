@@ -47,7 +47,7 @@ export default function Dashboard() {
     })
       .then(async res => {
         if (!res.ok || res.redirected) {
-          const target = `${BACKEND_URL}/auth/signoutContact`;
+          const target = `${BACKEND_URL}/auth/logout`;
             try {
               window.location.replace(target);
             } catch {
@@ -56,7 +56,7 @@ export default function Dashboard() {
         } 
       })
       .catch(() => {
-        const target = `${BACKEND_URL}/auth/signoutContact`;
+        const target = `${BACKEND_URL}/auth/logout`;
         try {
           window.location.replace(target);
         } catch {
@@ -309,7 +309,7 @@ export default function Dashboard() {
             </p>
           </div>
           <button
-            onClick={() => window.location.href = `${BACKEND_URL}/auth/signout`}
+            onClick={() => window.location.href = `${BACKEND_URL}/auth/logout`}
             className="flex items-center gap-2 text-gray-600 hover:text-[#3B82F6] transition-colors"
           >
             <LogOut className="w-5 h-5" />
