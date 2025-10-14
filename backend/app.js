@@ -90,8 +90,6 @@ app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
-app.use(express.json());
-
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/auth', authRouter);
@@ -102,15 +100,6 @@ app.use(function (req, res, next) {
 });
 
 app.use(errorHandler);
-
-// Error handler (JSON response)
-app.use(function (err, req, res, next) {
-    res.status(err.status || 500);
-    res.json({
-        message: err.message,
-        error: req.app.get('env') === 'development' ? err : {}
-    });
-});
   
 pool.connect()
   .then(client => {
