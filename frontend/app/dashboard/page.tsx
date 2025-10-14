@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mail, User, Settings, BarChart3, PlusCircle, LogOut } from 'lucide-react';
+import { Mail, User, Settings, BarChart3, PlusCircle } from 'lucide-react';
 
 interface UserProfile {
   email: string;
@@ -51,8 +51,8 @@ const StatisticsContent = () => {
         <p className="text-gray-600 max-w-md mx-auto">
           We zijn bezig met het ontwikkelen van geavanceerde statistieken om je inzicht te geven in je e-mail prestaties.
         </p>
-        <div className="inline-flex items-center space-x-2 text-blue-600 font-medium">
-          <span>Binnenkort beschikbaar</span>
+        <div className="flex flex-col items-center space-y-2">
+          <span className="text-blue-600 font-medium">Binnenkort beschikbaar</span>
           <div className="flex space-x-1">
             <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
             <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -169,10 +169,9 @@ export default function Dashboard() {
             </div>
             <button
               onClick={handleLogout}
-              className="mt-3 w-8 h-8 flex items-center justify-center text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
-              title="Uitloggen"
+              className="mt-3 w-full text-gray-600 hover:text-red-600 hover:bg-red-50 py-2 px-3 rounded-full transition-colors text-sm font-medium"
             >
-              <LogOut className="w-5 h-5" />
+              Uitloggen
             </button>
           </div>
         )}
