@@ -10,6 +10,30 @@ interface UserProfile {
   last: string;
 }
 
+const AccountContent = ({ profile }: { profile: UserProfile | null }) => {
+  if (!profile) return <div>Loading...</div>;
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <h2 className="text-xl font-semibold mb-4">Account Informatie</h2>
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-600">Voornaam</label>
+          <p className="mt-1 text-gray-900">{profile.first}</p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-600">Achternaam</label>
+          <p className="mt-1 text-gray-900">{profile.last}</p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-600">E-mail</label>
+          <p className="mt-1 text-gray-900">{profile.email}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function Dashboard() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -39,7 +63,7 @@ export default function Dashboard() {
   }, [BACKEND_URL, router]);
 
   const navigationItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+    { id: 'Statistieken', label: 'Statistieken', icon: BarChart3 },
     { id: 'mail', label: 'E-mail', icon: Mail },
     { id: 'account', label: 'Account', icon: User },
     { id: 'settings', label: 'Instellingen', icon: Settings },
@@ -58,7 +82,7 @@ export default function Dashboard() {
       {/* Sidebar Navigation */}
       <div className="w-64 bg-white border-r border-gray-200 px-3 py-4">
         <div className="mb-8">
-          <h2 className="text-xl font-bold px-4">Eply</h2>
+          <h2 className="text-xl font-bold px-4">Dashboard</h2>
         </div>
 
         <nav className="space-y-1">
@@ -102,19 +126,23 @@ export default function Dashboard() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 bg-gray-50 p-8">
+      <div className="flex-1 bg-gray-50 p-8 pt-16">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-2xl font-bold text-gray-900 mb-6">
             {navigationItems.find((item) => item.id === activeNav)?.label}
           </h1>
           
-          {/* Content area - you can add your specific content for each navigation item here */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-gray-600">
-              Dit is de {navigationItems.find((item) => item.id === activeNav)?.label} pagina.
-              Voeg hier je specifieke content toe.
-            </p>
-          </div>
+          {/* Conditional rendering based on active navigation */}
+          {activeNav === 'account' ? (
+            <AccountContent profile={profile} />
+          ) : (
+            <div className="bg-white rounded-lg shadow p-6">
+              <p className="text-gray-600">
+                Dit is de {navigationItems.find((item) => item.id === activeNav)?.label} pagina.
+                Voeg hier je specifieke content toe.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
