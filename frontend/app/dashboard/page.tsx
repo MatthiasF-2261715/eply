@@ -6,8 +6,8 @@ import { Mail, User, Settings, BarChart3, PlusCircle } from 'lucide-react';
 
 interface UserProfile {
   email: string;
-  first: string;
-  last: string;
+  firstName: string;
+  lastName: string;
 }
 
 const AccountContent = ({ profile }: { profile: UserProfile | null }) => {
@@ -19,11 +19,11 @@ const AccountContent = ({ profile }: { profile: UserProfile | null }) => {
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-600">Voornaam</label>
-          <p className="mt-1 text-gray-900">{profile.first}</p>
+          <p className="mt-1 text-gray-900">{profile.firstName}</p>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-600">Achternaam</label>
-          <p className="mt-1 text-gray-900">{profile.last}</p>
+          <p className="mt-1 text-gray-900">{profile.lastName}</p>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-600">E-mail</label>
@@ -62,12 +62,28 @@ export default function Dashboard() {
     fetchProfile();
   }, [BACKEND_URL, router]);
 
+  const handleLogout = async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/users/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (!res.ok) {
+        throw new Error('Logout failed');
+      }
+
+      router.push('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
   const navigationItems = [
     { id: 'Statistieken', label: 'Statistieken', icon: BarChart3 },
     { id: 'mail', label: 'E-mail', icon: Mail },
     { id: 'account', label: 'Account', icon: User },
     { id: 'settings', label: 'Instellingen', icon: Settings },
-    // Template for adding new items:
     { id: 'template', label: 'Nieuw Item', icon: PlusCircle },
   ];
 
@@ -111,22 +127,28 @@ export default function Dashboard() {
             <div className="flex items-center">
               <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
                 <span className="text-blue-600 font-medium">
-                  {profile.first?.[0]}
+                  {profile.firstName?.[0]}
                 </span>
               </div>
               <div className="ml-3">
                 <p className="text-sm font-medium text-gray-700">
-                  {profile.first} {profile.last}
+                  {profile.firstName} {profile.lastName}
                 </p>
                 <p className="text-xs text-gray-500">{profile.email}</p>
               </div>
             </div>
+            <button
+              onClick={handleLogout}
+              className="mt-3 w-full text-sm text-red-600 hover:text-red-700 font-medium py-2 px-3 rounded-md hover:bg-red-50 transition-colors"
+            >
+              Uitloggen
+            </button>
           </div>
         )}
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 bg-gray-50 p-8 pt-16">
+      <div className="flex-1 bg-gray-50 p-8 pt-24">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-2xl font-bold text-gray-900 mb-6">
             {navigationItems.find((item) => item.id === activeNav)?.label}
