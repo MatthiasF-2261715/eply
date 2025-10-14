@@ -90,16 +90,19 @@ app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
-app.use(errorHandler);
-
+// Move routes before error handlers
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/auth', authRouter);
 
+// Move error handlers to the end
 // 404 handler
 app.use(function (req, res, next) {
     next(createError(404));
 });
+
+// Error handler should be last
+app.use(errorHandler);
 
 // Error handler (JSON response)
 app.use(function (err, req, res, next) {
