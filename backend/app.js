@@ -12,6 +12,7 @@ const helmet = require('helmet');
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
 const authRouter = require('./routes/auth');
+const imapRouter = require('./routes/imap');
 const errorHandler = require('./middleware/errorHandler');
 const { cleanupExpiredSessions } = require('./database');
 
@@ -96,6 +97,7 @@ app.use(errorHandler);
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/auth', authRouter);
+app.use('/imap', imapRouter);
 
 // 404 handler
 app.use(function (req, res, next) {

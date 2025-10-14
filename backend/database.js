@@ -82,6 +82,23 @@ async function cleanupExpiredSessions() {
   }
 }
 
+async function saveImapSettings(server, port, email, password, userId) {
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const result = await pool.query(
+    'INSERT INTO imap (server, port, mail, password, related_user_id) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+    [server, port, email, hashedPassword, userId]
+  );
+  return result.rows[0].id;
+}
+
+async function getUserEmails(userId) {
+  const result = await pool.query(
+    'SELECT mail FROM imap WHERE related_user_id = $1',
+    [userId]
+  );
+  return result.rows.map(row => row.mail);
+}
+
 module.exports = { 
   getAssistantByEmail, 
   getUserById,
@@ -89,5 +106,7 @@ module.exports = {
   createUser,
   validateUser,
   deleteSession,
-  cleanupExpiredSessions
+  cleanupExpiredSessions,
+  saveImapSettings,
+  getUserEmails
 };

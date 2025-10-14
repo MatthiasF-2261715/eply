@@ -1,13 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Dialog, Transition } from '@headlessui/react';
+import { Fragment, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mail, User, Settings, BarChart3, PlusCircle } from 'lucide-react';
+import { Mail, User, Settings, BarChart3, PlusCircle, Loader2 } from 'lucide-react';
 
 interface UserProfile {
   email: string;
   firstName: string;
   lastName: string;
+}
+
+interface EmailFormData {
+  server: string;
+  port: number;
+  email: string;
+  password: string;
 }
 
 const AccountContent = ({ profile }: { profile: UserProfile | null }) => {
@@ -60,6 +68,205 @@ const StatisticsContent = () => {
           </div>
         </div>
       </div>
+    </div>
+  );
+};
+
+const EmailContent = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [emails, setEmails] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState<EmailFormData>({
+    server: '',
+    port: 993,
+    email: '',
+    password: ''
+  });
+
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+  useEffect(() => {
+    fetchEmails();
+  }, []);
+
+  const fetchEmails = async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/imap/get_emails`, {
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to fetch emails');
+      const data = await res.json();
+      setEmails(data.emails);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${BACKEND_URL}/imap/new_email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(formData)
+      });
+
+      if (!res.ok) throw new Error('Failed to add email');
+      
+      setIsOpen(false);
+      fetchEmails(); // Refresh email list
+      
+      // Reset form
+      setFormData({
+        server: '',
+        port: 993,
+        email: '',
+        password: ''
+      });
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Email List Section */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-semibold">Gekoppelde E-mailadressen</h2>
+          <button
+            onClick={() => setIsOpen(true)}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <PlusCircle className="w-4 h-4 mr-2" />
+            Nieuw e-mailadres
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          </div>
+        ) : emails.length > 0 ? (
+          <div className="grid gap-4">
+            {emails.map((email, index) => (
+              <div
+                key={index}
+                className="flex items-center p-4 bg-gray-50 rounded-lg"
+              >
+                <Mail className="w-5 h-5 text-blue-600 mr-3" />
+                <span>{email}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            Nog geen e-mailadressen gekoppeld
+          </div>
+        )}
+      </div>
+
+      {/* Add Email Modal */}
+      <Transition appear show={isOpen} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={() => setIsOpen(false)}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black bg-opacity-25" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl transition-all">
+                  <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 mb-4">
+                    E-mailadres Toevoegen
+                  </Dialog.Title>
+                  
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">E-mailadres</label>
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">IMAP Server</label>
+                      <input
+                        type="text"
+                        value={formData.server}
+                        onChange={(e) => setFormData({...formData, server: e.target.value})}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Port</label>
+                      <input
+                        type="number"
+                        value={formData.port}
+                        onChange={(e) => setFormData({...formData, port: parseInt(e.target.value)})}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Wachtwoord</label>
+                      <input
+                        type="password"
+                        value={formData.password}
+                        onChange={(e) => setFormData({...formData, password: e.target.value})}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+
+                    <div className="mt-6 flex justify-end space-x-3">
+                      <button
+                        type="button"
+                        onClick={() => setIsOpen(false)}
+                        className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md"
+                      >
+                        Annuleren
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
+                      >
+                        Toevoegen
+                      </button>
+                    </div>
+                  </form>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
     </div>
   );
 };
@@ -185,7 +392,9 @@ export default function Dashboard() {
           </h1>
           
           {/* Conditional rendering based on active navigation */}
-          {activeNav === 'account' ? (
+          {activeNav === 'mail' ? (
+            <EmailContent />
+          ) : activeNav === 'account' ? (
             <AccountContent profile={profile} />
           ) : activeNav === 'statistieken' ? (
             <StatisticsContent />
