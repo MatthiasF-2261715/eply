@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { isAuthenticated } = require('../middleware/auth');
-const { getUserById } = require('../database');
+const { getUserById, deleteSession } = require('../database');
 
 router.get('/profile', isAuthenticated, async function (req, res, next) {
     try {
