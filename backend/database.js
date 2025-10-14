@@ -84,6 +84,7 @@ async function cleanupExpiredSessions() {
 
 module.exports = { 
   getAssistantByEmail, 
+  getUserById,
   isUserWhitelisted, 
   createUser,
   validateUser,
