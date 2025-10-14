@@ -12,7 +12,7 @@ const helmet = require('helmet');
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
 const authRouter = require('./routes/auth');
-const errorHandler = require('./middleware/errorHandler');
+const { errorHandler } = require('./middleware/errorHandler');
 const { cleanupExpiredSessions } = require('./database');
 
 const app = express();
