@@ -1,6 +1,6 @@
 const express = require('express');
-const { createUser, validateUser, isUserWhitelisted, deleteSession } = require('../database');
 const router = express.Router();
+const { createUser, validateUser, isUserWhitelisted, deleteSession } = require('../database');
 
 // Login route
 router.post('/login', async (req, res) => {

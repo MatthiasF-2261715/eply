@@ -12,7 +12,7 @@ const helmet = require('helmet');
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
 const authRouter = require('./routes/auth');
-const { errorHandler } = require('./middleware/errorHandler');
+const errorHandler = require('./middleware/errorHandler');
 const { cleanupExpiredSessions } = require('./database');
 
 const app = express();
@@ -90,6 +90,9 @@ app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
+app.use(express.json());
+app.use(errorHandler);
+
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/auth', authRouter);
@@ -99,7 +102,14 @@ app.use(function (req, res, next) {
     next(createError(404));
 });
 
-app.use(errorHandler);
+// Error handler (JSON response)
+app.use(function (err, req, res, next) {
+    res.status(err.status || 500);
+    res.json({
+        message: err.message,
+        error: req.app.get('env') === 'development' ? err : {}
+    });
+});
   
 pool.connect()
   .then(client => {
