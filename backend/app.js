@@ -90,18 +90,17 @@ app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
-// Move routes before error handlers
+app.use(express.json());
+
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/auth', authRouter);
 
-// Move error handlers to the end
 // 404 handler
 app.use(function (req, res, next) {
     next(createError(404));
 });
 
-// Error handler should be last
 app.use(errorHandler);
 
 // Error handler (JSON response)
@@ -113,17 +112,17 @@ app.use(function (err, req, res, next) {
     });
 });
   
-  pool.connect()
-    .then(client => {
-      client.release();
-      const port = process.env.PORT || 4000;
-      app.listen(port, '0.0.0.0', () => {
-      });
-    })
-    .catch(err => {
-      console.error('Database connection error:', err.stack);
-      process.exit(1);
+pool.connect()
+  .then(client => {
+    client.release();
+    const port = process.env.PORT || 4000;
+    app.listen(port, '0.0.0.0', () => {
     });
+  })
+  .catch(err => {
+    console.error('Database connection error:', err.stack);
+    process.exit(1);
+  });
 
 // Now daily session deletion
 if (isProduction) {
