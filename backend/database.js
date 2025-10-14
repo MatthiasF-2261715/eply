@@ -23,6 +23,14 @@ async function getAssistantByEmail(email) {
   return result.rows[0];
 }
 
+async function getUserById(userId) {
+  const result = await pool.query('SELECT id, first, last, email FROM users WHERE id = $1', [userId]);
+  if (result.rows.length === 0) {
+    throw new Error('User not found');
+  }
+  return result.rows[0];
+}
+
 async function isUserWhitelisted(email) {
   if (!email) return false;
   const result = await pool.query('SELECT 1 FROM whitelist WHERE email = $1 LIMIT 1', [email]);

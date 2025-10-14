@@ -19,9 +19,7 @@ router.post('/login', async (req, res) => {
 
     // Set session
     req.session.userId = userId;
-    req.session.email = email;
     req.session.isAuthenticated = true;
-    req.session.method = 'local';
 
     await req.session.save();
     res.json({ success: true });
@@ -55,9 +53,7 @@ router.post('/register', async (req, res) => {
 
     // Set session
     req.session.userId = userId;
-    req.session.email = email;
     req.session.isAuthenticated = true;
-    req.session.method = 'local';
 
     await req.session.save();
     res.json({ success: true });

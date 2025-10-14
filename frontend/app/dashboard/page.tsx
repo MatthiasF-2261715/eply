@@ -1,383 +1,122 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Mail, Settings, BarChart3, Clock, Users, ArrowRight, LogOut } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect, useRef } from 'react';
-import { useErrorHandler } from '@/hooks/useErrorHandler';
+import { Mail, User, Settings, BarChart3, PlusCircle } from 'lucide-react';
 
-type ErrorType = {
-  message: string;
-  skipError: boolean;
-  retryFn?: () => void;
-} | null;
-
-type ErrorPopupProps = {
-  error: ErrorType;
-  onClose: () => void;
-  onRetry: () => void;
-};
+interface UserProfile {
+  email: string;
+  first: string;
+  last: string;
+}
 
 export default function Dashboard() {
   const router = useRouter();
-  const { handleError, handleSuccess } = useErrorHandler();
-  const [loading, setLoading] = useState(true);
-  const [username, setUsername] = useState<string | null>(null);
-  const [emails, setEmails] = useState<any[]>([]);
-  const [emailsError, setEmailsError] = useState<string | null>(null);
-  const [showReplyPopup, setShowReplyPopup] = useState(false);
-  const [currentReply, setCurrentReply] = useState('');
-  const [lastCheckTime, setLastCheckTime] = useState<number>(Date.now());
-  const isInitialLoad = useRef(true);
-  const [processedEmailIds, setProcessedEmailIds] = useState<Set<string>>(new Set());
-  const [loadingReplies, setLoadingReplies] = useState<Set<string>>(new Set());
-  const [whitelistDone, setWhitelistDone] = useState(false);
-  const [profileDone, setProfileDone] = useState(false);
-  const [error, setError] = useState<ErrorType>(null);
-
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [activeNav, setActiveNav] = useState('dashboard');
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   useEffect(() => {
-    let isMounted = true;
-    fetch(`${BACKEND_URL}/users/isWhitelisted`, {
-      credentials: 'include',
-      method: 'GET',
-    })
-      .then(async res => {
-        if (!res.ok || res.redirected) {
-          const target = `${BACKEND_URL}/auth/logout`;
-            try {
-              window.location.replace(target);
-            } catch {
-              router.replace(target);
-            }
-        } 
-      })
-      .catch(() => {
-        const target = `${BACKEND_URL}/auth/logout`;
-        try {
-          window.location.replace(target);
-        } catch {
-          router.replace(target);
-        }
-      })
-      .finally(() => {
-        if (isMounted) setWhitelistDone(true);
-      });
-    return () => { isMounted = false; };
-  }, [BACKEND_URL, router]);
-
-  useEffect(() => {
-    let isMounted = true;
-    fetch(`${BACKEND_URL}/users/profile`, {
-      credentials: 'include',
-    })
-      .then(async res => {
-        if (!res.ok || res.redirected) {
-          router.replace('/');
-        } else {
-          const data = await res.json();
-          if (isMounted) setUsername(data.username);
-        }
-      })
-      .catch(() => {
-        router.replace('/');
-      })
-      .finally(() => {
-        if (isMounted) setProfileDone(true);
-      });
-    return () => { isMounted = false; };
-  }, [BACKEND_URL, router]);
-
-  useEffect(() => {
-    if (whitelistDone && profileDone) {
-      setLoading(false);
-    }
-  }, [whitelistDone, profileDone]);
-
-  const handleGenerateReply = async (emailToReply = null, force = false) => {
-    const targetEmail = emailToReply || (emails.length ? emails[0] : null);
-    if (!targetEmail) return;
-
-    const emailId = targetEmail.id || targetEmail.subject;
-    setLoadingReplies(prev => new Set(prev).add(emailId));
-
-    // Handle different email formats (IMAP vs Outlook)
-    const emailAddress = targetEmail.from?.emailAddress?.address || targetEmail.from;
-    const title = targetEmail.subject;
-    const content = targetEmail.body?.content || targetEmail.text || targetEmail.content;
-    const originalMailId = targetEmail.id || '';
-
-    if (!emailAddress || !title || !content) {
-      setLoadingReplies(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(emailId);
-        return newSet;
-      });
-      return;
-    }
-
-    try {      
-      const response = await fetch(`${BACKEND_URL}/users/ai/reply`, { 
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          email: emailAddress,
-          title: title,
-          content: content,
-          originalMailId: originalMailId,
-          force: force
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Server error');
-      }
-
-      const data = await response.json();
-      
-      if (data.skip) {
-        setError({
-          message: 'Deze e-mail is overgeslagen omdat het mogelijk spam, reclame of een automatisch bericht betreft.',
-          skipError: true,
-          retryFn: () => handleGenerateReply(emailToReply, true)
-        });
-        return;
-      }
-      
-      setCurrentReply(data.response || 'Geen antwoord ontvangen');
-      setShowReplyPopup(true);
-      handleSuccess('AI antwoord gegenereerd');
-    } catch (err) {
-      handleError(err);
-    } finally {
-      setLoadingReplies(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(emailId);
-        return newSet;
-      });
-    }
-  };
-
-  useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-
-    const fetchEmails = async () => {
+    const fetchProfile = async () => {
       try {
-        const res = await fetch(`${BACKEND_URL}/users/mails`, {
+        const res = await fetch(`${BACKEND_URL}/users/profile`, {
           credentials: 'include',
         });
 
-        if (!res.ok || res.redirected) {
-          throw new Error('Niet ingelogd of sessie verlopen.');
+        if (!res.ok) {
+          throw new Error('Failed to fetch profile');
         }
 
         const data = await res.json();
-        const newEmails = Array.isArray(data) ? data : data.mails || [];
-        setEmails(newEmails);
-
-        if (newEmails.length > 0) {
-          const latestEmail = newEmails[0];
-          const emailTime = new Date(latestEmail.date).getTime();
-          
-          // Only generate reply if email is newer than last check AND not processed before
-          if (!isInitialLoad.current && 
-              emailTime > lastCheckTime && 
-              !processedEmailIds.has(latestEmail.id)) {
-            await handleGenerateReply(latestEmail);
-            // Add email ID to processed set
-            setProcessedEmailIds(prev => new Set(prev).add(latestEmail.id));
-          }
-          
-          if (isInitialLoad.current) {
-            isInitialLoad.current = false;
-          }
-          
-          setLastCheckTime(Date.now());
-        }
+        setProfile(data);
       } catch (error) {
-        handleError(error);
-        setEmails([]);
-      } 
+        console.error('Error fetching profile:', error);
+        router.push('/');
+      }
     };
 
-    fetchEmails();
-    intervalId = setInterval(fetchEmails, 60000);
+    fetchProfile();
+  }, [BACKEND_URL, router]);
 
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [processedEmailIds]);
+  const navigationItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+    { id: 'mail', label: 'E-mail', icon: Mail },
+    { id: 'account', label: 'Account', icon: User },
+    { id: 'settings', label: 'Instellingen', icon: Settings },
+    // Template for adding new items:
+    { id: 'template', label: 'Nieuw Item', icon: PlusCircle },
+  ];
 
-  const ReplyPopup = () => {
-    if (!showReplyPopup) return null;
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white p-6 rounded-lg shadow-xl max-w-2xl w-full m-4">
-          <h3 className="text-lg font-bold mb-4">AI Gegenereerd Antwoord</h3>
-          <div className="bg-gray-50 p-4 rounded mb-4 whitespace-pre-wrap">
-            {currentReply}
-          </div>
-          <Button 
-            onClick={() => setShowReplyPopup(false)}
-            className="w-full"
-          >
-            Sluiten
-          </Button>
-        </div>
-      </div>
-    );
+  const handleNavClick = (navId: string) => {
+    setActiveNav(navId);
+    // Here you can add navigation logic for each item
+    // Example: router.push(`/dashboard/${navId}`);
   };
 
-  const ErrorPopup = ({ error, onClose, onRetry }: ErrorPopupProps) => {
-    if (!error || !error.skipError) return null;
-
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-      >
-        <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.95, opacity: 0 }}
-          className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden"
-        >
-          <div className="p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Mail className="w-5 h-5 text-yellow-600" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900">Let op</h3>
-            </div>
-            
-            <p className="text-gray-600 mb-6">
-              {error.message}
-            </p>
-
-            <div className="flex gap-3">
-              <Button 
-                onClick={onClose}
-                variant="outline"
-                className="flex-1 h-11 rounded-full border-gray-300 text-gray-600 hover:bg-gray-50 hover:border-gray-400"
-              >
-                Overslaan
-              </Button>
-              <Button 
-                onClick={onRetry}
-                className="flex-1 h-11 rounded-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white"
-              >
-                Toch genereren
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </div>
-          </div>
-        </motion.div>
-      </motion.div>
-    );
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <span className="text-gray-500 text-lg">Laden...</span>
-      </div>
-    );
-  }
-
-  // Simplified, cleaner UI but keep all logic intact
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-3">
-              <Mail className="w-8 h-8 text-[#3B82F6]" />
-              Recente E-mail Activiteit
-            </h1>
-            <p className="text-gray-600 mt-2">
-              {username ? `Hallo ${username}! Hier verschijnen je laatste e-mails en draft-replies.` : 'Hier verschijnen je laatste e-mails en draft-replies.'}
-            </p>
-          </div>
-          <button
-            onClick={() => window.location.href = `${BACKEND_URL}/auth/logout`}
-            className="flex items-center gap-2 text-gray-600 hover:text-[#3B82F6] transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-            Uitloggen
-          </button>
+    <div className="min-h-screen flex">
+      {/* Sidebar Navigation */}
+      <div className="w-64 bg-white border-r border-gray-200 px-3 py-4">
+        <div className="mb-8">
+          <h2 className="text-xl font-bold px-4">Eply</h2>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100">
-          <div className="divide-y divide-gray-100">
-            {emails.length === 0 && !emailsError && (
-              <div className="p-6 text-gray-500">Geen e-mails gevonden.</div>
-            )}
+        <nav className="space-y-1">
+          {navigationItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleNavClick(item.id)}
+                className={`w-full flex items-center px-4 py-3 text-sm rounded-lg transition-colors ${
+                  activeNav === item.id
+                    ? 'bg-blue-50 text-blue-600'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <Icon className="w-5 h-5 mr-3" />
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
 
-            {emailsError && (
-              <div className="p-6 text-red-500">{emailsError}</div>
-            )}
+        {/* User Profile Section */}
+        {profile && (
+          <div className="absolute bottom-0 left-0 w-64 p-4 border-t border-gray-200">
+            <div className="flex items-center">
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                <span className="text-blue-600 font-medium">
+                  {profile.first?.[0]}
+                </span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-700">
+                  {profile.first} {profile.last}
+                </p>
+                <p className="text-xs text-gray-500">{profile.email}</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
-            {emails.map((email, index) => {
-              const subject = email.subject || '(Geen onderwerp)';
-              const from = email.from?.emailAddress?.address || email.from || 'Onbekend';
-              const to = email.to?.emailAddress?.address || email.to || '';
-              const dateObj = email.date ? new Date(email.date) : null;
-              const date = dateObj ? dateObj.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }) : '';
-              const time = dateObj ? dateObj.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }) : '';
-              const emailKey = `${email.id || index}-${subject}`;
-
-              return (
-                <div key={emailKey} className="p-6 hover:bg-blue-50/50 transition-colors group">
-                  <div className="flex items-start justify-between gap-6">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-bold mb-2">{subject}</h3>
-                      <div className="space-y-1">
-                        <p className="text-sm text-gray-600"><span className="font-medium">Van:</span> {from}</p>
-                        <p className="text-sm text-gray-600 truncate"><span className="font-medium">Naar:</span> {to}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4 flex-shrink-0">
-                      <div className="text-right">
-                        <p className="text-sm text-gray-500">{date}{time ? `, ${time}` : ''}</p>
-                      </div>
-                      <button
-                        onClick={() => handleGenerateReply(email)}
-                        disabled={loadingReplies.has(email.id || email.subject)}
-                        className="bg-white border-2 border-gray-200 text-gray-700 px-6 py-2.5 rounded-xl hover:border-[#3B82F6] hover:text-[#3B82F6] hover:bg-blue-50 transition-all hover:-translate-y-0.5 shadow-sm hover:shadow-md flex items-center gap-2 font-medium group-hover:border-[#3B82F6] disabled:opacity-60"
-                      >
-                        {loadingReplies.has(email.id || email.subject) ? 'Laden...' : 'AI Reply'}
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+      {/* Main Content Area */}
+      <div className="flex-1 bg-gray-50 p-8">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-2xl font-bold text-gray-900 mb-6">
+            {navigationItems.find((item) => item.id === activeNav)?.label}
+          </h1>
+          
+          {/* Content area - you can add your specific content for each navigation item here */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <p className="text-gray-600">
+              Dit is de {navigationItems.find((item) => item.id === activeNav)?.label} pagina.
+              Voeg hier je specifieke content toe.
+            </p>
           </div>
         </div>
       </div>
-      <ReplyPopup />
-      <ErrorPopup 
-        error={error}
-        onClose={() => setError(null)}
-        onRetry={() => {
-          if (error?.retryFn) {
-            error.retryFn();
-            setError(null);
-          }
-        }}
-      />
     </div>
   );
 }
