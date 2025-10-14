@@ -19,3 +19,5 @@ router.get('/profile', isAuthenticated, async function (req, res, next) {
         res.status(500).json({ error: 'Error fetching profile' });
     }
 });
+
+module.exports = router;
