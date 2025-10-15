@@ -4,6 +4,7 @@ const { ImapFlow } = require('imapflow');
 
 let latestMessages = [];
 let lastError = null;
+let lastCheckTimestamps = {}; // Store last check time per account
 
 async function checkEmails() {
     try {
@@ -17,13 +18,12 @@ async function checkEmails() {
             return;
         }
 
-        const allMessages = [];
+        const newMessages = [];
         const errors = [];
 
         for (const account of imapAccounts) {
             try {
                 console.log(`Attempting to connect to ${account.server} for ${account.email}...`);
-                console.log(account.password);
                 const client = new ImapFlow({
                     host: account.server,
                     port: account.port,
@@ -44,22 +44,51 @@ async function checkEmails() {
                 await client.mailboxOpen('INBOX');
                 console.log(`Opened INBOX for ${account.email}`);
 
+                const currentCheckTime = new Date();
+                
+                // If this is the first check, set lastCheckTime to now (so we don't fetch old emails)
+                if (!lastCheckTimestamps[account.email]) {
+                    console.log(`First check for ${account.email}, setting baseline timestamp. No emails will be fetched.`);
+                    lastCheckTimestamps[account.email] = currentCheckTime;
+                    await client.logout();
+                    continue; // Skip to next account
+                }
+
+                const lastCheckTime = lastCheckTimestamps[account.email];
+
                 const messages = [];
                 for await (let message of client.fetch('1:*', { 
                     uid: true, 
                     envelope: true, 
                     bodyStructure: true 
                 })) {
-                    messages.push({
-                        uid: message.uid,
-                        subject: message.envelope.subject,
-                        from: message.envelope.from?.[0]?.address,
-                        date: message.envelope.date,
-                        accountEmail: account.email
-                    });
+                    const messageDate = new Date(message.envelope.date);
+                    
+                    // Only include messages received after last check
+                    if (messageDate > lastCheckTime) {
+                        messages.push({
+                            uid: message.uid,
+                            subject: message.envelope.subject,
+                            from: message.envelope.from?.[0]?.address,
+                            date: message.envelope.date,
+                            accountEmail: account.email
+                        });
+                    }
                 }
 
-                allMessages.push(...messages.slice(-10));
+                if (messages.length > 0) {
+                    console.log(`Found ${messages.length} new email(s) for ${account.email}:`);
+                    messages.forEach(msg => {
+                        console.log(`  - From: ${msg.from}, Subject: ${msg.subject}, Date: ${msg.date}`);
+                    });
+                    newMessages.push(...messages);
+                } else {
+                    console.log(`No new emails for ${account.email}`);
+                }
+
+                // Update last check timestamp for this account
+                lastCheckTimestamps[account.email] = currentCheckTime;
+
                 await client.logout();
 
             } catch (error) {
@@ -82,14 +111,14 @@ async function checkEmails() {
             }
         }
 
-        // Sort all messages by date descending
-        allMessages.sort((a, b) => new Date(b.date) - new Date(a.date));
+        // Sort new messages by date descending
+        newMessages.sort((a, b) => new Date(b.date) - new Date(a.date));
         
-        // Store only the latest 10 messages
-        latestMessages = allMessages.slice(0, 10);
+        // Store the new messages
+        latestMessages = newMessages;
         lastError = errors.length > 0 ? errors : null;
 
-        console.log('Email check completed. Latest messages:', latestMessages);
+        console.log(`Email check completed. Found ${newMessages.length} new message(s) in total.`);
 
     } catch (error) {
         console.error('Error in mail sync service:', error);
