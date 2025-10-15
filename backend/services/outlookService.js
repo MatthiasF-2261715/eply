@@ -1,7 +1,6 @@
 const fetch = require('../fetch');
 
 async function getOutlookSentEmails(session) {
-    // Gebruik /me/messages met filter in plaats van mailFolders
     const sentEndpoint = 'https://graph.microsoft.com/v1.0/me/messages?$filter=isDraft eq false and sender/emailAddress/address eq \'' + 
                          (session.account?.username || session.email) + 
                          '\'&$top=10&$orderby=sentDateTime desc';
@@ -14,7 +13,6 @@ async function getOutlookSentEmails(session) {
     } catch (error) {
         console.error('Error fetching sent emails:', error);
         
-        // Fallback: probeer zonder filter
         try {
             const fallbackEndpoint = 'https://graph.microsoft.com/v1.0/me/messages?$filter=isDraft eq false&$top=10&$orderby=sentDateTime desc';
             console.log('Trying fallback endpoint:', fallbackEndpoint);
@@ -28,41 +26,67 @@ async function getOutlookSentEmails(session) {
 }
 
 async function getOutlookInboxEmails(session) {
-    // Gebruik direct /me/messages met receivedDateTime filter
-    const inboxEndpoint = 'https://graph.microsoft.com/v1.0/me/messages?$filter=isDraft eq false&$top=10&$orderby=receivedDateTime desc';
-    
+    // Probeer eerst de inbox folder direct
     try {
-        console.log('Fetching inbox emails with endpoint:', inboxEndpoint);
-        const response = await fetch(inboxEndpoint, session.accessToken);
-        console.log('Inbox emails response:', response);
-        console.log('Inbox emails count:', response.value?.length || 0);
+        console.log('Attempting to fetch from Inbox folder...');
+        const inboxFolderEndpoint = 'https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=10&$orderby=receivedDateTime desc';
+        const response = await fetch(inboxFolderEndpoint, session.accessToken);
         
-        // Extra logging voor de eerste mail indien beschikbaar
+        console.log('Inbox folder response count:', response.value?.length || 0);
+        
         if (response.value && response.value.length > 0) {
-            console.log('First email sample:', {
-                subject: response.value[0].subject,
-                from: response.value[0].from?.emailAddress?.address,
-                receivedDateTime: response.value[0].receivedDateTime
-            });
+            console.log('Successfully fetched from inbox folder');
+            return response.value;
         }
-        
-        return response.value || [];
     } catch (error) {
-        console.error('Error fetching inbox emails:', error);
-        console.error('Error details:', error.message);
-        
-        // Probeer alternatieve methode: lijst alle messages zonder filter
-        try {
-            const fallbackEndpoint = 'https://graph.microsoft.com/v1.0/me/messages?$top=10&$orderby=receivedDateTime desc';
-            console.log('Trying fallback endpoint without filter:', fallbackEndpoint);
-            const response = await fetch(fallbackEndpoint, session.accessToken);
-            console.log('Fallback response count:', response.value?.length || 0);
-            return response.value || [];
-        } catch (fallbackError) {
-            console.error('Fallback also failed:', fallbackError);
-            return [];
-        }
+        console.error('Error fetching from inbox folder:', error);
     }
+
+    // Fallback 1: Probeer zonder isDraft filter
+    try {
+        console.log('Trying without isDraft filter...');
+        const endpoint = 'https://graph.microsoft.com/v1.0/me/messages?$top=10&$orderby=receivedDateTime desc';
+        const response = await fetch(endpoint, session.accessToken);
+        
+        console.log('Messages without filter count:', response.value?.length || 0);
+        
+        if (response.value && response.value.length > 0) {
+            // Filter drafts manually
+            const nonDrafts = response.value.filter(msg => !msg.isDraft);
+            console.log('Non-draft messages:', nonDrafts.length);
+            return nonDrafts;
+        }
+    } catch (error) {
+        console.error('Error fetching without filter:', error);
+    }
+
+    // Fallback 2: Probeer met inferenceClassification
+    try {
+        console.log('Trying with inferenceClassification...');
+        const endpoint = 'https://graph.microsoft.com/v1.0/me/messages?$filter=inferenceClassification eq \'focused\'&$top=10&$orderby=receivedDateTime desc';
+        const response = await fetch(endpoint, session.accessToken);
+        
+        console.log('Focused messages count:', response.value?.length || 0);
+        
+        if (response.value && response.value.length > 0) {
+            return response.value.filter(msg => !msg.isDraft);
+        }
+    } catch (error) {
+        console.error('Error fetching focused messages:', error);
+    }
+
+    // Fallback 3: Check permissions
+    try {
+        console.log('Checking mailbox settings and permissions...');
+        const mailboxEndpoint = 'https://graph.microsoft.com/v1.0/me/mailboxSettings';
+        const mailboxSettings = await fetch(mailboxEndpoint, session.accessToken);
+        console.log('Mailbox settings:', mailboxSettings);
+    } catch (error) {
+        console.error('Error checking mailbox settings:', error);
+    }
+
+    console.warn('All methods failed to fetch emails');
+    return [];
 }
 
 module.exports = { getOutlookSentEmails, getOutlookInboxEmails };
