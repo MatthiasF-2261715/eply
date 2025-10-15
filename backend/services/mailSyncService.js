@@ -6,10 +6,32 @@ const { validateEmail } = require('./emailValidationService');
 const { useAssistant } = require('../assistant');
 const { createImapDraft } = require('./draftService');
 const { getImapSentEmails } = require('./imapService');
+const { convert } = require('html-to-text');
 
 let latestMessages = [];
 let lastError = null;
 let lastCheckTimestamps = {}; // Store last check time per account
+
+function extractTextFromEmail(parsed) {
+    // Probeer eerst plain text
+    if (parsed.text && parsed.text.trim()) {
+        return parsed.text.trim();
+    }
+    
+    // Als er geen text is maar wel html, converteer HTML naar text
+    if (parsed.html) {
+        return convert(parsed.html, {
+            wordwrap: false,
+            preserveNewlines: true,
+            selectors: [
+                { selector: 'img', format: 'skip' },
+                { selector: 'a', options: { ignoreHref: true } }
+            ]
+        }).trim();
+    }
+    
+    return '';
+}
 
 async function processNewEmail(message, account) {
     try {
@@ -133,12 +155,14 @@ async function checkEmails() {
                     if (messageDate > lastCheckTime) {
                         try {
                             const parsed = await simpleParser(msg.source);
+                            const emailText = extractTextFromEmail(parsed);
+                            
                             const emailData = {
                                 uid: msg.uid,
                                 subject: msg.envelope.subject,
                                 from: msg.envelope.from?.[0]?.address,
                                 date: msg.envelope.date,
-                                text: parsed.text,
+                                text: emailText,
                                 accountEmail: account.email
                             };
                             
