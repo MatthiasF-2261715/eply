@@ -1,383 +1,413 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Mail, Settings, BarChart3, Clock, Users, ArrowRight, LogOut } from 'lucide-react';
+import { Dialog, Transition } from '@headlessui/react';
+import { Fragment, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect, useRef } from 'react';
-import { useErrorHandler } from '@/hooks/useErrorHandler';
+import { Mail, User, Settings, BarChart3, PlusCircle, Loader2 } from 'lucide-react';
 
-type ErrorType = {
-  message: string;
-  skipError: boolean;
-  retryFn?: () => void;
-} | null;
+interface UserProfile {
+  email: string;
+  firstName: string;
+  lastName: string;
+}
 
-type ErrorPopupProps = {
-  error: ErrorType;
-  onClose: () => void;
-  onRetry: () => void;
+interface EmailFormData {
+  server: string;
+  port: number;
+  email: string;
+  password: string;
+}
+
+const AccountContent = ({ profile }: { profile: UserProfile | null }) => {
+  if (!profile) return <div>Loading...</div>;
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <h2 className="text-xl font-semibold mb-4">Account Informatie</h2>
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-600">Voornaam</label>
+          <p className="mt-1 text-gray-900">{profile.firstName}</p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-600">Achternaam</label>
+          <p className="mt-1 text-gray-900">{profile.lastName}</p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-600">E-mail</label>
+          <p className="mt-1 text-gray-900">{profile.email}</p>
+        </div>
+      </div>
+    </div>
+  );
 };
 
-export default function Dashboard() {
-  const router = useRouter();
-  const { handleError, handleSuccess } = useErrorHandler();
+const StatisticsContent = () => {
+  return (
+    <div className="bg-white rounded-lg shadow-lg p-8">
+      <div className="text-center space-y-4">
+        <div className="relative w-24 h-24 mx-auto">
+          <BarChart3 className="w-full h-full text-blue-500 animate-pulse" />
+          <div className="absolute -top-2 -right-2">
+            <div className="relative">
+              <div className="w-4 h-4 bg-yellow-400 rounded-full animate-ping" />
+              <div className="absolute top-0 w-4 h-4 bg-yellow-500 rounded-full" />
+            </div>
+          </div>
+        </div>
+        <h2 className="text-2xl font-bold text-gray-800">Statistieken</h2>
+        <p className="text-gray-600 max-w-md mx-auto">
+          We zijn bezig met het ontwikkelen van geavanceerde statistieken om je inzicht te geven in je e-mail prestaties.
+        </p>
+        <div className="flex flex-col items-center space-y-2">
+          <span className="text-blue-600 font-medium">Binnenkort beschikbaar</span>
+          <div className="flex space-x-1">
+            <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+            <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+            <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const EmailContent = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [emails, setEmails] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [username, setUsername] = useState<string | null>(null);
-  const [emails, setEmails] = useState<any[]>([]);
-  const [emailsError, setEmailsError] = useState<string | null>(null);
-  const [showReplyPopup, setShowReplyPopup] = useState(false);
-  const [currentReply, setCurrentReply] = useState('');
-  const [lastCheckTime, setLastCheckTime] = useState<number>(Date.now());
-  const isInitialLoad = useRef(true);
-  const [processedEmailIds, setProcessedEmailIds] = useState<Set<string>>(new Set());
-  const [loadingReplies, setLoadingReplies] = useState<Set<string>>(new Set());
-  const [whitelistDone, setWhitelistDone] = useState(false);
-  const [profileDone, setProfileDone] = useState(false);
-  const [error, setError] = useState<ErrorType>(null);
+  const [formData, setFormData] = useState<EmailFormData>({
+    server: '',
+    port: 993,
+    email: '',
+    password: ''
+  });
 
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   useEffect(() => {
-    let isMounted = true;
-    fetch(`${BACKEND_URL}/users/isWhitelisted`, {
-      credentials: 'include',
-      method: 'GET',
-    })
-      .then(async res => {
-        if (!res.ok || res.redirected) {
-          const target = `${BACKEND_URL}/auth/signoutContact`;
-            try {
-              window.location.replace(target);
-            } catch {
-              router.replace(target);
-            }
-        } 
-      })
-      .catch(() => {
-        const target = `${BACKEND_URL}/auth/signoutContact`;
-        try {
-          window.location.replace(target);
-        } catch {
-          router.replace(target);
-        }
-      })
-      .finally(() => {
-        if (isMounted) setWhitelistDone(true);
-      });
-    return () => { isMounted = false; };
-  }, [BACKEND_URL, router]);
+    fetchEmails();
+  }, []);
 
-  useEffect(() => {
-    let isMounted = true;
-    fetch(`${BACKEND_URL}/users/profile`, {
-      credentials: 'include',
-    })
-      .then(async res => {
-        if (!res.ok || res.redirected) {
-          router.replace('/');
-        } else {
-          const data = await res.json();
-          if (isMounted) setUsername(data.username);
-        }
-      })
-      .catch(() => {
-        router.replace('/');
-      })
-      .finally(() => {
-        if (isMounted) setProfileDone(true);
+  const fetchEmails = async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/imap/get_linked_emails`, {
+        credentials: 'include',
       });
-    return () => { isMounted = false; };
-  }, [BACKEND_URL, router]);
-
-  useEffect(() => {
-    if (whitelistDone && profileDone) {
+      if (!res.ok) throw new Error('Failed to fetch emails');
+      const data = await res.json();
+      setEmails(data.emails);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
       setLoading(false);
     }
-  }, [whitelistDone, profileDone]);
+  };
 
-  const handleGenerateReply = async (emailToReply = null, force = false) => {
-    const targetEmail = emailToReply || (emails.length ? emails[0] : null);
-    if (!targetEmail) return;
-
-    const emailId = targetEmail.id || targetEmail.subject;
-    setLoadingReplies(prev => new Set(prev).add(emailId));
-
-    // Handle different email formats (IMAP vs Outlook)
-    const emailAddress = targetEmail.from?.emailAddress?.address || targetEmail.from;
-    const title = targetEmail.subject;
-    const content = targetEmail.body?.content || targetEmail.text || targetEmail.content;
-    const originalMailId = targetEmail.id || '';
-
-    if (!emailAddress || !title || !content) {
-      setLoadingReplies(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(emailId);
-        return newSet;
-      });
-      return;
-    }
-
-    try {      
-      const response = await fetch(`${BACKEND_URL}/users/ai/reply`, { 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${BACKEND_URL}/imap/link_email`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          email: emailAddress,
-          title: title,
-          content: content,
-          originalMailId: originalMailId,
-          force: force
-        })
+        body: JSON.stringify(formData)
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Server error');
-      }
-
-      const data = await response.json();
+      if (!res.ok) throw new Error('Failed to add email');
       
-      if (data.skip) {
-        setError({
-          message: 'Deze e-mail is overgeslagen omdat het mogelijk spam, reclame of een automatisch bericht betreft.',
-          skipError: true,
-          retryFn: () => handleGenerateReply(emailToReply, true)
-        });
-        return;
-      }
+      setIsOpen(false);
+      fetchEmails(); // Refresh email list
       
-      setCurrentReply(data.response || 'Geen antwoord ontvangen');
-      setShowReplyPopup(true);
-      handleSuccess('AI antwoord gegenereerd');
-    } catch (err) {
-      handleError(err);
-    } finally {
-      setLoadingReplies(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(emailId);
-        return newSet;
+      // Reset form
+      setFormData({
+        server: '',
+        port: 993,
+        email: '',
+        password: ''
       });
+    } catch (error) {
+      console.error('Error:', error);
     }
   };
 
-  useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-
-    const fetchEmails = async () => {
-      try {
-        const res = await fetch(`${BACKEND_URL}/users/mails`, {
-          credentials: 'include',
-        });
-
-        if (!res.ok || res.redirected) {
-          throw new Error('Niet ingelogd of sessie verlopen.');
-        }
-
-        const data = await res.json();
-        const newEmails = Array.isArray(data) ? data : data.mails || [];
-        setEmails(newEmails);
-
-        if (newEmails.length > 0) {
-          const latestEmail = newEmails[0];
-          const emailTime = new Date(latestEmail.date).getTime();
-          
-          // Only generate reply if email is newer than last check AND not processed before
-          if (!isInitialLoad.current && 
-              emailTime > lastCheckTime && 
-              !processedEmailIds.has(latestEmail.id)) {
-            await handleGenerateReply(latestEmail);
-            // Add email ID to processed set
-            setProcessedEmailIds(prev => new Set(prev).add(latestEmail.id));
-          }
-          
-          if (isInitialLoad.current) {
-            isInitialLoad.current = false;
-          }
-          
-          setLastCheckTime(Date.now());
-        }
-      } catch (error) {
-        handleError(error);
-        setEmails([]);
-      } 
-    };
-
-    fetchEmails();
-    intervalId = setInterval(fetchEmails, 60000);
-
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [processedEmailIds]);
-
-  const ReplyPopup = () => {
-    if (!showReplyPopup) return null;
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white p-6 rounded-lg shadow-xl max-w-2xl w-full m-4">
-          <h3 className="text-lg font-bold mb-4">AI Gegenereerd Antwoord</h3>
-          <div className="bg-gray-50 p-4 rounded mb-4 whitespace-pre-wrap">
-            {currentReply}
-          </div>
-          <Button 
-            onClick={() => setShowReplyPopup(false)}
-            className="w-full"
-          >
-            Sluiten
-          </Button>
-        </div>
-      </div>
-    );
-  };
-
-  const ErrorPopup = ({ error, onClose, onRetry }: ErrorPopupProps) => {
-    if (!error || !error.skipError) return null;
-
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-      >
-        <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.95, opacity: 0 }}
-          className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden"
-        >
-          <div className="p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Mail className="w-5 h-5 text-yellow-600" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900">Let op</h3>
-            </div>
-            
-            <p className="text-gray-600 mb-6">
-              {error.message}
-            </p>
-
-            <div className="flex gap-3">
-              <Button 
-                onClick={onClose}
-                variant="outline"
-                className="flex-1 h-11 rounded-full border-gray-300 text-gray-600 hover:bg-gray-50 hover:border-gray-400"
-              >
-                Overslaan
-              </Button>
-              <Button 
-                onClick={onRetry}
-                className="flex-1 h-11 rounded-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white"
-              >
-                Toch genereren
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </div>
-          </div>
-        </motion.div>
-      </motion.div>
-    );
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <span className="text-gray-500 text-lg">Laden...</span>
-      </div>
-    );
-  }
-
-  // Simplified, cleaner UI but keep all logic intact
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-3">
-              <Mail className="w-8 h-8 text-[#3B82F6]" />
-              Recente E-mail Activiteit
-            </h1>
-            <p className="text-gray-600 mt-2">
-              {username ? `Hallo ${username}! Hier verschijnen je laatste e-mails en draft-replies.` : 'Hier verschijnen je laatste e-mails en draft-replies.'}
-            </p>
-          </div>
+    <div className="space-y-6">
+      {/* Email List Section */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-semibold">Gekoppelde E-mailadressen</h2>
           <button
-            onClick={() => window.location.href = `${BACKEND_URL}/auth/signout`}
-            className="flex items-center gap-2 text-gray-600 hover:text-[#3B82F6] transition-colors"
+            onClick={() => setIsOpen(true)}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            <LogOut className="w-5 h-5" />
-            Uitloggen
+            <PlusCircle className="w-4 h-4 mr-2" />
+            Nieuw e-mailadres
           </button>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100">
-          <div className="divide-y divide-gray-100">
-            {emails.length === 0 && !emailsError && (
-              <div className="p-6 text-gray-500">Geen e-mails gevonden.</div>
-            )}
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          </div>
+        ) : emails.length > 0 ? (
+          <div className="grid gap-4">
+            {emails.map((email, index) => (
+              <div
+                key={index}
+                className="flex items-center p-4 bg-gray-50 rounded-lg"
+              >
+                <Mail className="w-5 h-5 text-blue-600 mr-3" />
+                <span>{email}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            Nog geen e-mailadressen gekoppeld
+          </div>
+        )}
+      </div>
 
-            {emailsError && (
-              <div className="p-6 text-red-500">{emailsError}</div>
-            )}
+      {/* Add Email Modal */}
+      <Transition appear show={isOpen} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={() => setIsOpen(false)}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black bg-opacity-25" />
+          </Transition.Child>
 
-            {emails.map((email, index) => {
-              const subject = email.subject || '(Geen onderwerp)';
-              const from = email.from?.emailAddress?.address || email.from || 'Onbekend';
-              const to = email.to?.emailAddress?.address || email.to || '';
-              const dateObj = email.date ? new Date(email.date) : null;
-              const date = dateObj ? dateObj.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }) : '';
-              const time = dateObj ? dateObj.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }) : '';
-              const emailKey = `${email.id || index}-${subject}`;
-
-              return (
-                <div key={emailKey} className="p-6 hover:bg-blue-50/50 transition-colors group">
-                  <div className="flex items-start justify-between gap-6">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-bold mb-2">{subject}</h3>
-                      <div className="space-y-1">
-                        <p className="text-sm text-gray-600"><span className="font-medium">Van:</span> {from}</p>
-                        <p className="text-sm text-gray-600 truncate"><span className="font-medium">Naar:</span> {to}</p>
-                      </div>
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl transition-all">
+                  <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 mb-4">
+                    E-mailadres Toevoegen
+                  </Dialog.Title>
+                  
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">E-mailadres</label>
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">IMAP Server</label>
+                      <input
+                        type="text"
+                        value={formData.server}
+                        onChange={(e) => setFormData({...formData, server: e.target.value})}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Port</label>
+                      <input
+                        type="number"
+                        value={formData.port}
+                        onChange={(e) => setFormData({...formData, port: parseInt(e.target.value)})}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Wachtwoord</label>
+                      <input
+                        type="password"
+                        value={formData.password}
+                        onChange={(e) => setFormData({...formData, password: e.target.value})}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        required
+                      />
                     </div>
 
-                    <div className="flex items-center gap-4 flex-shrink-0">
-                      <div className="text-right">
-                        <p className="text-sm text-gray-500">{date}{time ? `, ${time}` : ''}</p>
-                      </div>
+                    <div className="mt-6 flex justify-end space-x-3">
                       <button
-                        onClick={() => handleGenerateReply(email)}
-                        disabled={loadingReplies.has(email.id || email.subject)}
-                        className="bg-white border-2 border-gray-200 text-gray-700 px-6 py-2.5 rounded-xl hover:border-[#3B82F6] hover:text-[#3B82F6] hover:bg-blue-50 transition-all hover:-translate-y-0.5 shadow-sm hover:shadow-md flex items-center gap-2 font-medium group-hover:border-[#3B82F6] disabled:opacity-60"
+                        type="button"
+                        onClick={() => setIsOpen(false)}
+                        className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md"
                       >
-                        {loadingReplies.has(email.id || email.subject) ? 'Laden...' : 'AI Reply'}
-                        <ArrowRight className="w-4 h-4" />
+                        Annuleren
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
+                      >
+                        Toevoegen
                       </button>
                     </div>
-                  </div>
-                </div>
-              );
-            })}
+                  </form>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
           </div>
+        </Dialog>
+      </Transition>
+    </div>
+  );
+};
+
+export default function Dashboard() {
+  const router = useRouter();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [activeNav, setActiveNav] = useState('dashboard');
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch(`${BACKEND_URL}/users/profile`, {
+          credentials: 'include',
+        });
+
+        if (!res.ok) {
+          throw new Error('Failed to fetch profile');
+        }
+
+        const data = await res.json();
+        setProfile(data);
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        router.push('/');
+      }
+    };
+
+    fetchProfile();
+  }, [BACKEND_URL, router]);
+
+  const handleLogout = async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/users/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (!res.ok) {
+        throw new Error('Logout failed');
+      }
+
+      router.push('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  const navigationItems = [
+    { id: 'account', label: 'Account', icon: User },
+    { id: 'mail', label: 'E-mail', icon: Mail },
+    { id: 'settings', label: 'Instellingen', icon: Settings },
+    { id: 'statistieken', label: 'Statistieken', icon: BarChart3 },
+    { id: 'template', label: 'Nieuw Item', icon: PlusCircle },
+  ];
+
+  const handleNavClick = (navId: string) => {
+    setActiveNav(navId);
+    // Here you can add navigation logic for each item
+    // Example: router.push(`/dashboard/${navId}`);
+  };
+
+  return (
+    <div className="min-h-screen flex">
+      {/* Sidebar Navigation */}
+      <div className="w-64 bg-white border-r border-gray-200 px-3 py-4">
+        <div className="mb-8">
+          <h2 className="text-xl font-bold px-4">Dashboard</h2>
+        </div>
+
+        <nav className="space-y-1">
+          {navigationItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleNavClick(item.id)}
+                className={`w-full flex items-center px-4 py-3 text-sm rounded-lg transition-colors ${
+                  activeNav === item.id
+                    ? 'bg-blue-50 text-blue-600'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <Icon className="w-5 h-5 mr-3" />
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* User Profile Section */}
+        {profile && (
+          <div className="absolute bottom-0 left-0 w-64 p-4 border-t border-gray-200">
+            <div className="flex items-center">
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                <span className="text-blue-600 font-medium">
+                  {profile.firstName?.[0]}
+                </span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-700">
+                  {profile.firstName} {profile.lastName}
+                </p>
+                <p className="text-xs text-gray-500">{profile.email}</p>
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="mt-3 w-full text-gray-600 hover:text-red-600 hover:bg-red-50 py-2 px-3 rounded-full transition-colors text-sm font-medium"
+            >
+              Uitloggen
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 bg-gray-50 p-8 pt-24">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-2xl font-bold text-gray-900 mb-6">
+            {navigationItems.find((item) => item.id === activeNav)?.label}
+          </h1>
+          
+          {/* Conditional rendering based on active navigation */}
+          {activeNav === 'mail' ? (
+            <EmailContent />
+          ) : activeNav === 'account' ? (
+            <AccountContent profile={profile} />
+          ) : activeNav === 'statistieken' ? (
+            <StatisticsContent />
+          ) : (
+            <div className="bg-white rounded-lg shadow p-6">
+              <p className="text-gray-600">
+                Dit is de {navigationItems.find((item) => item.id === activeNav)?.label} pagina.
+                Voeg hier je specifieke content toe.
+              </p>
+            </div>
+          )}
         </div>
       </div>
-      <ReplyPopup />
-      <ErrorPopup 
-        error={error}
-        onClose={() => setError(null)}
-        onRetry={() => {
-          if (error?.retryFn) {
-            error.retryFn();
-            setError(null);
-          }
-        }}
-      />
     </div>
   );
 }
