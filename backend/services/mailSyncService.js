@@ -1,10 +1,74 @@
 const cron = require('node-cron');
-const { getImapCredentials } = require('../database');
+const { getImapCredentials, getAssistantByEmail } = require('../database');
 const { ImapFlow } = require('imapflow');
+const { simpleParser } = require('mailparser');
+const { validateEmail } = require('./emailValidationService');
+const { useAssistant } = require('../assistant');
+const { createImapDraft } = require('./draftService');
+const { getImapSentEmails } = require('./imapService');
 
 let latestMessages = [];
 let lastError = null;
 let lastCheckTimestamps = {}; // Store last check time per account
+
+async function processNewEmail(message, account) {
+    try {
+        console.log(`Processing new email: ${message.subject} from ${message.from}`);
+        
+        // Validate email (skip automated/spam)
+        const emailContent = message.text || message.html || '';
+        const isValid = await validateEmail(message.from, emailContent);
+        
+        if (!isValid) {
+            console.log(`Skipping automated/spam email from ${message.from}`);
+            return;
+        }
+
+        // Get user's assistant
+        const assistantObj = await getAssistantByEmail(account.email);
+        const assistantId = assistantObj.assistant_id || assistantObj.id;
+
+        // Get sent emails for context
+        const sentEmails = await getImapSentEmails({
+            email: account.email,
+            password: account.password,
+            imapServer: account.server,
+            port: account.port
+        });
+
+        // Generate AI response
+        const currentEmail = { 
+            from: emailContent, 
+            title: message.subject 
+        };
+        const aiResponse = await useAssistant(assistantId, currentEmail, sentEmails);
+
+        console.log(`Generated AI response for email from ${message.from}`);
+
+        // Create draft reply
+        const session = {
+            imap: {
+                email: account.email,
+                password: account.password,
+                imapServer: account.server,
+                port: account.port
+            }
+        };
+
+        await createImapDraft(
+            session, 
+            aiResponse, 
+            message.uid, 
+            emailContent,
+            { treatAsUid: true }
+        );
+
+        console.log(`Draft reply created for email from ${message.from}`);
+
+    } catch (error) {
+        console.error(`Error processing email ${message.subject}:`, error);
+    }
+}
 
 async function checkEmails() {
     try {
@@ -57,22 +121,35 @@ async function checkEmails() {
                 const lastCheckTime = lastCheckTimestamps[account.email];
 
                 const messages = [];
-                for await (let message of client.fetch('1:*', { 
+                for await (let msg of client.fetch('1:*', { 
                     uid: true, 
-                    envelope: true, 
-                    bodyStructure: true 
+                    envelope: true,
+                    source: true
                 })) {
-                    const messageDate = new Date(message.envelope.date);
+                    const messageDate = new Date(msg.envelope.date);
                     
                     // Only include messages received after last check
                     if (messageDate > lastCheckTime) {
-                        messages.push({
-                            uid: message.uid,
-                            subject: message.envelope.subject,
-                            from: message.envelope.from?.[0]?.address,
-                            date: message.envelope.date,
-                            accountEmail: account.email
-                        });
+                        try {
+                            const parsed = await simpleParser(msg.source);
+                            const emailData = {
+                                uid: msg.uid,
+                                subject: msg.envelope.subject,
+                                from: msg.envelope.from?.[0]?.address,
+                                date: msg.envelope.date,
+                                text: parsed.text,
+                                html: parsed.html,
+                                accountEmail: account.email
+                            };
+                            
+                            messages.push(emailData);
+                            
+                            // Process this new email immediately
+                            await processNewEmail(emailData, account);
+                            
+                        } catch (parseError) {
+                            console.error('Error parsing message:', parseError);
+                        }
                     }
                 }
 
