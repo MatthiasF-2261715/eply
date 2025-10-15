@@ -16,7 +16,8 @@ async function processNewEmail(message, account) {
         console.log(`Processing new email: ${message.subject} from ${message.from}`);
         
         // Validate email (skip automated/spam)
-        const emailContent = message.text || message.html || '';
+        console.log(`Email content: ${message.text}`);
+        const emailContent = message.text || '';
         const isValid = await validateEmail(message.from, emailContent);
         
         if (!isValid) {
@@ -138,7 +139,6 @@ async function checkEmails() {
                                 from: msg.envelope.from?.[0]?.address,
                                 date: msg.envelope.date,
                                 text: parsed.text,
-                                html: parsed.html,
                                 accountEmail: account.email
                             };
                             
