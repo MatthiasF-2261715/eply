@@ -1,9 +1,37 @@
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
+
+// Encryption helpers for IMAP passwords
+function encryptPassword(password) {
+  const algorithm = 'aes-256-cbc';
+  const key = Buffer.from(process.env.ENCRYPTION_KEY, 'hex');
+  const iv = crypto.randomBytes(16);
+  
+  const cipher = crypto.createCipheriv(algorithm, key, iv);
+  let encrypted = cipher.update(password, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  
+  return iv.toString('hex') + ':' + encrypted;
+}
+
+function decryptPassword(encryptedData) {
+  const algorithm = 'aes-256-cbc';
+  const key = Buffer.from(process.env.ENCRYPTION_KEY, 'hex');
+  const parts = encryptedData.split(':');
+  const iv = Buffer.from(parts[0], 'hex');
+  const encrypted = parts[1];
+  
+  const decipher = crypto.createDecipheriv(algorithm, key, iv);
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+  
+  return decrypted;
+}
 
 async function getUserIdByEmail(email) {
   if (!email) throw new Error('Email is required');
@@ -85,10 +113,10 @@ async function cleanupExpiredSessions() {
 }
 
 async function saveImapSettings(server, port, email, password, userId) {
-  const hashedPassword = await bcrypt.hash(password, 10);
+  const encryptedPassword = encryptPassword(password);
   const result = await pool.query(
     'INSERT INTO imap (server, port, mail, password, related_user_id) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-    [server, port, email, hashedPassword, userId]
+    [server, port, email, encryptedPassword, userId]
   );
   return result.rows[0].id;
 }
@@ -110,7 +138,7 @@ async function getImapCredentials() {
         server: row.server,
         port: row.port,
         email: row.mail,
-        password: row.password
+        password: decryptPassword(row.password)
     }));
 }
 
