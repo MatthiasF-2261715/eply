@@ -61,13 +61,9 @@ router.get('/mails', isAuthenticated, async function(req, res, next) {
     if (!req.session.method) {
         return res.status(401).json({ error: 'Niet ingelogd.' });
     }
-
-    console.log('Fetching mails for method:', req.session.method);
-    console.log('Session email:', getSessionEmail(req));
     
     try {
         const mails = await getInboxEmails(req.session.method, req.session);
-        console.log('Fetched mails count:', mails.length);
         res.json({ mails });
     } catch (error) {
         console.error('Error fetching mails:', error);

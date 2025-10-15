@@ -6,7 +6,8 @@ const pool = new Pool({
 
 async function getUserIdByEmail(email) {
   if (!email) throw new Error('Email is required');
-  const userResult = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+  const normalizedEmail = email.toLowerCase();
+  const userResult = await pool.query('SELECT id FROM users WHERE email = $1', [normalizedEmail]);
   if (userResult.rows.length === 0) {
     throw new Error('User not found');
   }
@@ -24,7 +25,8 @@ async function getAssistantByEmail(email) {
 
 async function isUserWhitelisted(email) {
   if (!email) return false;
-  const result = await pool.query('SELECT 1 FROM users WHERE email = $1 LIMIT 1', [email]);
+  const normalizedEmail = email.toLowerCase();
+  const result = await pool.query('SELECT 1 FROM users WHERE email = $1 LIMIT 1', [normalizedEmail]);
   return result.rowCount > 0;
 }
 
