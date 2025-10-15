@@ -12,9 +12,7 @@ const helmet = require('helmet');
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
 const authRouter = require('./routes/auth');
-const imapRouter = require('./routes/imap');
 const errorHandler = require('./middleware/errorHandler');
-const { cleanupExpiredSessions } = require('./database');
 
 const app = express();
 
@@ -97,7 +95,6 @@ app.use(errorHandler);
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/auth', authRouter);
-app.use('/imap', imapRouter);
 
 // 404 handler
 app.use(function (req, res, next) {
@@ -113,21 +110,14 @@ app.use(function (err, req, res, next) {
     });
 });
   
-pool.connect()
-  .then(client => {
-    client.release();
-    const port = process.env.PORT || 4000;
-    app.listen(port, '0.0.0.0', () => {
+  pool.connect()
+    .then(client => {
+      client.release();
+      const port = process.env.PORT || 4000;
+      app.listen(port, '0.0.0.0', () => {
+      });
+    })
+    .catch(err => {
+      console.error('Database connection error:', err.stack);
+      process.exit(1);
     });
-  })
-  .catch(err => {
-    console.error('Database connection error:', err.stack);
-    process.exit(1);
-  });
-
-// Now daily session deletion
-if (isProduction) {
-  setInterval(async () => {
-    await cleanupExpiredSessions();
-  }, 24 * 60 * 60 * 1000);
-}

@@ -1,20 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Mail, Lock } from 'lucide-react';
 import Link from 'next/link';
+import { Mail, Server } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 export default function LoginPage() {
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
   const router = useRouter();
-  const { handleError } = useErrorHandler();
+  const { handleError, handleSuccess } = useErrorHandler();
   const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
 
   useEffect(() => {
     fetch(`${BACKEND_URL}/users/profile`, {
@@ -22,6 +18,7 @@ export default function LoginPage() {
     })
       .then(async (res) => {
         if (res.ok && !res.redirected) {
+          // Als de user is ingelogd, redirect naar dashboard
           router.replace('/dashboard');
         }
       })
@@ -30,33 +27,12 @@ export default function LoginPage() {
       });
   }, [BACKEND_URL, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleOutlookLogin = () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        router.replace('/dashboard');
-      } else {
-        throw new Error('Login failed');
-      }
+      window.location.href = `${BACKEND_URL}/auth/outlook-login`;
     } catch (error) {
       handleError(error);
     }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
   };
 
   if (loading) {
@@ -72,63 +48,35 @@ export default function LoginPage() {
       <div className="max-w-md mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-[#0B1220] mb-3">Inloggen</h1>
-          <p className="text-gray-600">Log in met je e-mailadres</p>
+          <p className="text-gray-600">Kies je voorkeursmethode om in te loggen</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                E-mailadres
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-              </div>
+        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 space-y-4">
+          <button
+            type="button"
+            onClick={handleOutlookLogin}
+            className="w-full bg-[#0078D4] text-white py-4 px-6 rounded-xl hover:bg-[#106EBE] transition-all hover:-translate-y-1 shadow-lg hover:shadow-xl flex items-center justify-center gap-3 text-lg font-semibold"
+          >
+            <Mail className="w-6 h-6" />
+            Inloggen met Outlook
+          </button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
             </div>
-
-            <div className="space-y-2">
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Wachtwoord
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-              </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-white text-gray-500">of</span>
             </div>
-
-            <button
-              type="submit"
-              className="w-full bg-[#3B82F6] text-white py-4 px-6 rounded-xl hover:bg-[#2563EB] transition-all hover:-translate-y-1 shadow-lg hover:shadow-xl flex items-center justify-center gap-3 text-lg font-semibold"
-            >
-              Inloggen
-            </button>
-          </form>
-
-          <div className="mt-6">
-            <Link 
-              href="/forgot-password"
-              className="text-sm text-blue-600 hover:underline block text-center"
-            >
-              Wachtwoord vergeten?
-            </Link>
           </div>
+
+          <Link 
+            href="/imap"
+            className="w-full bg-[#3B82F6] text-white py-4 px-6 rounded-xl hover:bg-[#2563EB] transition-all hover:-translate-y-1 shadow-lg hover:shadow-xl flex items-center justify-center gap-3 text-lg font-semibold"
+          >
+            <Server className="w-6 h-6" />
+            Inloggen via IMAP
+          </Link>
         </div>
 
         <p className="text-center text-gray-600 mt-6">

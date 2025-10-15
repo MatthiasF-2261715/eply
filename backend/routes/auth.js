@@ -1,87 +1,169 @@
-const express = require('express');
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+
+var express = require('express');
+
+const authProvider = require('../auth/AuthProvider');
+const Imap = require('imap');
+const { FRONTEND_URL, BACKEND_URL, REDIRECT_URI, POST_LOGOUT_REDIRECT_URI } = require('../auth/authConfig');
+const { isUserWhitelisted } = require('../database');
+const { imapLimiter } = require('../middleware/rateLimiter');
+
 const router = express.Router();
-const { createUser, validateUser, isUserWhitelisted, deleteSession } = require('../database');
 
-// Login route
-router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email en wachtwoord zijn verplicht' });
-  }
-
-  try {
-    const userId = await validateUser(email, password);
-    
-    if (!userId) {
-      return res.status(401).json({ error: 'Ongeldige inloggegevens' });
-    }
-
-    // Set session
-    req.session.userId = userId;
-    req.session.isAuthenticated = true;
-
-    await req.session.save();
-    res.json({ success: true });
-
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Er is een fout opgetreden' });
-  }
+router.get('/outlook-login', (req, res, next) => {
+    authProvider.login({
+        scopes: ["openid", "profile", "User.Read", "Mail.Read", "Mail.ReadWrite"],
+        redirectUri: REDIRECT_URI,
+        successRedirect: `${BACKEND_URL}/auth/acquireOutlookToken`
+    })(req, res, next);
 });
 
-// Register route
-router.post('/register', async (req, res) => {
-  const { firstName, lastName, email, password } = req.body;
-
-  if (!firstName || !lastName || !email || !password) {
-    return res.status(400).json({ error: 'Alle velden zijn verplicht' });
-  }
-
-  try {
-    // Check if user is whitelisted
-    const whitelisted = await isUserWhitelisted(email);
-    if (!whitelisted) {
-      return res.status(403).json({ 
-        error: 'Geen toegang. Neem contact op met de beheerder.',
-        redirectUrl: '/#contact'
-      });
+router.post('/imap-login', imapLimiter, async (req, res) => {
+    const { email, password, imapServer, port } = req.body;
+    if (!email || !password || !imapServer || !port) {
+        return res.status(400).json({ error: 'Vul alle velden in.' });
     }
 
-    // Create user
-    const userId = await createUser(firstName, lastName, email, password);
+    try {
+        const whitelisted = await isUserWhitelisted(email);
+        if (!whitelisted) {
+            return res.status(403).json({ 
+                error: 'Geen toegang. Neem contact op met de beheerder.',
+                redirectUrl: `${FRONTEND_URL}/#contact`
+            });
+        }
+    } catch (err) {
+        console.error('[Whitelist] Error:', err);
+        return res.status(500).json({ error: 'Fout bij controleren toegang.' });
+    }
 
-    // Set session
-    req.session.userId = userId;
-    req.session.isAuthenticated = true;
+    const imap = new Imap({
+        user: email,
+        password: password,
+        host: imapServer,
+        port: parseInt(port, 10),
+        tls: true,
+        debug: false,
+        tlsOptions: { 
+            rejectUnauthorized: false,
+            servername: imapServer,
+            ciphers: 'HIGH:MEDIUM:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!SRP:!CAMELLIA'
+        },
+        connTimeout: 15000,
+        authTimeout: 10000, 
+        keepalive: {
+            interval: 10000,
+            idleInterval: 300000,
+            forceNoop: true
+        }
+    });
 
-    await req.session.save();
-    res.json({ success: true });
+    let connectionAttempts = 0;
+    const maxAttempts = 3;
 
-  } catch (error) {
-    console.error('Registration error:', error);
-    if (error.code === '23505') { // Unique violation
-      res.status(400).json({ error: 'Email is al in gebruik' });
+    function attemptConnection() {
+        connectionAttempts++;
+        
+        const connectionTimeout = setTimeout(() => {
+            try {
+                imap.end();
+            } catch (e) {
+                // Ignore cleanup errors
+            }
+            if (connectionAttempts < maxAttempts) {
+                setTimeout(attemptConnection, 3000);
+            } else {
+                res.status(408).json({ 
+                    error: 'Verbinding time-out. Controleer je server instellingen.' 
+                });
+            }
+        }, 20000); // 20 second timeout
+
+        imap.once('ready', function() {
+            clearTimeout(connectionTimeout);
+            req.session.isAuthenticated = true;
+            req.session.imap = { email, password, imapServer, port };
+            req.session.method = 'imap';
+            req.session.save((err) => {
+                if (err) {
+                    console.error('Session save error:', err);
+                    return res.status(500).json({ error: 'Session save failed' });
+                }
+
+                imap.end();
+                res.json({ success: true });
+            });
+        });
+
+        imap.once('error', function(err) {
+            console.error('[IMAP] Error:', err);
+            clearTimeout(connectionTimeout);
+            if (connectionAttempts < maxAttempts) {
+                setTimeout(attemptConnection, 3000); // Increased retry delay
+            } else {
+                res.status(401).json({ 
+                    error: `IMAP inloggen mislukt: ${err.message}. Controleer je inloggegevens en probeer het opnieuw.` 
+                });
+            }
+        });
+
+        imap.once('end', function() {
+            clearTimeout(connectionTimeout);
+        });
+
+        try {
+            imap.connect();
+        } catch (err) {
+            console.error('[IMAP] Connection error:', err);
+            clearTimeout(connectionTimeout);
+            res.status(401).json({ error: 'Verbinding maken mislukt' });
+        }
+    }
+
+    attemptConnection();
+});
+
+router.get('/acquireOutlookToken', authProvider.acquireToken({
+    scopes: ["openid", "profile", "User.Read", "Mail.Read"],
+    redirectUri: REDIRECT_URI,
+    successRedirect: `${FRONTEND_URL}/dashboard`
+}));
+
+router.post('/redirect', authProvider.handleRedirect());
+
+router.get('/signout', (req, res, next) => {
+    if (req.session.method === 'outlook') {
+        authProvider.logout({
+            postLogoutRedirectUri: POST_LOGOUT_REDIRECT_URI
+        })(req, res, next);
+    } else if (req.session.method === 'imap') {
+        req.session.destroy(() => {
+            res.redirect(POST_LOGOUT_REDIRECT_URI); // of res.json({ success: true });
+        });
     } else {
-      res.status(500).json({ error: 'Er is een fout opgetreden' });
+        req.session.destroy(() => {
+            res.redirect(POST_LOGOUT_REDIRECT_URI);
+        });
     }
-  }
 });
 
-// Logout route
-router.post('/logout', async (req, res) => {
-  if (req.session.id && process.env.NODE_ENV === 'production') {
-    await deleteSession(req.session.id);
-  }
-
-  req.session.destroy((err) => {
-    if (err) {
-      console.error('Logout error:', err);
-      return res.status(500).json({ error: 'Er is een fout opgetreden' });
+router.get('/signoutContact', (req, res, next) => {
+    if (req.session.method === 'outlook') {
+        authProvider.logout({
+            postLogoutRedirectUri: `${POST_LOGOUT_REDIRECT_URI}/#contact`
+        })(req, res, next);
+    } else if (req.session.method === 'imap') {
+        req.session.destroy(() => {
+            res.redirect(`${POST_LOGOUT_REDIRECT_URI}/#contact`);
+        });
+    } else {
+        req.session.destroy(() => {
+            res.redirect(`${POST_LOGOUT_REDIRECT_URI}/#contact`);
+        });
     }
-    res.json({ success: true, redirectUrl: process.env.FRONTEND_URL });
-  });
 });
 
 module.exports = router;
-

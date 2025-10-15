@@ -1,5 +1,4 @@
 const { Pool } = require('pg');
-const bcrypt = require('bcrypt');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -23,90 +22,10 @@ async function getAssistantByEmail(email) {
   return result.rows[0];
 }
 
-async function getUserById(userId) {
-  const result = await pool.query('SELECT id, first, last, email FROM users WHERE id = $1', [userId]);
-  if (result.rows.length === 0) {
-    throw new Error('User not found');
-  }
-  return result.rows[0];
-}
-
 async function isUserWhitelisted(email) {
   if (!email) return false;
-  const result = await pool.query('SELECT 1 FROM whitelist WHERE email = $1 LIMIT 1', [email]);
+  const result = await pool.query('SELECT 1 FROM users WHERE email = $1 LIMIT 1', [email]);
   return result.rowCount > 0;
 }
 
-async function createUser(firstName, lastName, email, password) {
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const result = await pool.query(
-    'INSERT INTO users (first, last, email, password) VALUES ($1, $2, $3, $4) RETURNING id',
-    [firstName, lastName, email, hashedPassword]
-  );
-  return result.rows[0].id;
-}
-
-async function validateUser(email, password) {
-  const result = await pool.query(
-    'SELECT id, password FROM users WHERE email = $1',
-    [email]
-  );
-  
-  if (result.rows.length === 0) {
-    return null;
-  }
-
-  const user = result.rows[0];
-  const validPassword = await bcrypt.compare(password, user.password);
-  
-  return validPassword ? user.id : null;
-}
-
-async function deleteSession(sessionId) {
-  try {
-    await pool.query('DELETE FROM user_sessions WHERE sid = $1', [sessionId]);
-    return true;
-  } catch (err) {
-    console.error('Error deleting session:', err);
-    return false;
-  }
-}
-
-async function cleanupExpiredSessions() {
-  try {
-    await pool.query('DELETE FROM user_sessions WHERE expire < NOW()');
-    return true;
-  } catch (err) {
-    console.error('Session cleanup error:', err);
-    return false;
-  }
-}
-
-async function saveImapSettings(server, port, email, password, userId) {
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const result = await pool.query(
-    'INSERT INTO imap (server, port, mail, password, related_user_id) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-    [server, port, email, hashedPassword, userId]
-  );
-  return result.rows[0].id;
-}
-
-async function getUserEmails(userId) {
-  const result = await pool.query(
-    'SELECT mail FROM imap WHERE related_user_id = $1',
-    [userId]
-  );
-  return result.rows.map(row => row.mail);
-}
-
-module.exports = { 
-  getAssistantByEmail, 
-  getUserById,
-  isUserWhitelisted, 
-  createUser,
-  validateUser,
-  deleteSession,
-  cleanupExpiredSessions,
-  saveImapSettings,
-  getUserEmails
-};
+module.exports = { getAssistantByEmail, isUserWhitelisted };
