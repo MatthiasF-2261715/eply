@@ -21,7 +21,7 @@ async function checkWithAI(emailContent) {
       model: "gpt-4",
       messages: [{
         role: "system",
-        content: "Analyze if this email appears to be spam, automated, or a marketing message. Respond only with true (if it's spam/automated) or false (if it's a regular email that needs a response)."
+        content: "Analyze if this email appears to be spam, automated, or a marketing message. Respond only with true (if it's spam/automated) or false (if it's a regular email that needs a response). If the email is a real calendar invite (Outlook, Google, etc.): Don't reply"
       }, {
         role: "user",
         content: emailContent

@@ -134,20 +134,20 @@ const EmailContent = () => {
   return (
     <div className="space-y-6">
       {/* Email List Section */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold">Gekoppelde E-mailadressen</h2>
+      <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-2xl font-bold text-gray-900">Gekoppelde E-mailadressen</h2>
           <button
             onClick={() => setIsOpen(true)}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-full hover:from-blue-700 hover:to-blue-600 transition-all hover:shadow-lg hover:-translate-y-0.5 font-medium"
           >
-            <PlusCircle className="w-4 h-4 mr-2" />
+            <PlusCircle className="w-5 h-5 mr-2" />
             Nieuw e-mailadres
           </button>
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-8">
+          <div className="flex justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
           </div>
         ) : emails.length > 0 ? (
@@ -155,16 +155,28 @@ const EmailContent = () => {
             {emails.map((email, index) => (
               <div
                 key={index}
-                className="flex items-center p-4 bg-gray-50 rounded-lg"
+                className="group flex items-center justify-between p-5 bg-gradient-to-r from-gray-50 to-blue-50/30 rounded-2xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all"
               >
-                <Mail className="w-5 h-5 text-blue-600 mr-3" />
-                <span>{email}</span>
+                <div className="flex items-center">
+                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mr-4 group-hover:bg-blue-200 transition-colors">
+                    <Mail className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <span className="text-gray-900 font-medium">{email}</span>
+                    <p className="text-sm text-gray-500 mt-0.5">Actief</p>
+                  </div>
+                </div>
+                <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-center py-8 text-gray-500">
-            Nog geen e-mailadressen gekoppeld
+          <div className="text-center py-16">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+              <Mail className="w-10 h-10 text-gray-400" />
+            </div>
+            <p className="text-gray-500 text-lg">Nog geen e-mailadressen gekoppeld</p>
+            <p className="text-gray-400 text-sm mt-2">Klik op de knop hierboven om je eerste e-mail toe te voegen</p>
           </div>
         )}
       </div>
@@ -207,7 +219,7 @@ const EmailContent = () => {
                         type="email"
                         value={formData.email}
                         onChange={(e) => setFormData({...formData, email: e.target.value})}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        className="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-3"
                         required
                       />
                     </div>
@@ -218,7 +230,7 @@ const EmailContent = () => {
                         type="text"
                         value={formData.server}
                         onChange={(e) => setFormData({...formData, server: e.target.value})}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        className="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-3"
                         required
                       />
                     </div>
@@ -229,7 +241,7 @@ const EmailContent = () => {
                         type="number"
                         value={formData.port}
                         onChange={(e) => setFormData({...formData, port: parseInt(e.target.value)})}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        className="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-3"
                         required
                       />
                     </div>
@@ -240,7 +252,7 @@ const EmailContent = () => {
                         type="password"
                         value={formData.password}
                         onChange={(e) => setFormData({...formData, password: e.target.value})}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        className="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-3"
                         required
                       />
                     </div>
@@ -249,13 +261,13 @@ const EmailContent = () => {
                       <button
                         type="button"
                         onClick={() => setIsOpen(false)}
-                        className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md"
+                        className="px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
                       >
                         Annuleren
                       </button>
                       <button
                         type="submit"
-                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
+                        className="px-6 py-3 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 rounded-xl transition-all hover:shadow-lg"
                       >
                         Toevoegen
                       </button>
@@ -267,6 +279,75 @@ const EmailContent = () => {
           </div>
         </Dialog>
       </Transition>
+    </div>
+  );
+};
+
+const SignatureContent = () => {
+  const [signature, setSignature] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [success, setSuccess] = useState(false);
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+  useEffect(() => {
+    const fetchSignature = async () => {
+      try {
+        const res = await fetch(`${BACKEND_URL}/settings/signature`, {
+          credentials: 'include',
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSignature(data.signature || '');
+        }
+      } catch (error) {
+        console.error('Error fetching signature:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSignature();
+  }, [BACKEND_URL]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSuccess(false);
+    try {
+      const res = await fetch(`${BACKEND_URL}/settings/signature`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ signature }),
+      });
+      if (res.ok) setSuccess(true);
+    } catch (error) {
+      console.error('Error saving signature:', error);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6 max-w-lg">
+      <h2 className="text-xl font-semibold mb-4">E-mail Handtekening</h2>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <textarea
+          value={signature}
+          onChange={(e) => setSignature(e.target.value)}
+          rows={6}
+          className="w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-3"
+          placeholder="Voeg hier je handtekening toe..."
+          required
+        />
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            className="px-6 py-3 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 rounded-xl transition-all hover:shadow-lg"
+          >
+            Opslaan
+          </button>
+        </div>
+        {success && (
+          <p className="text-green-600 text-sm mt-2">Handtekening opgeslagen!</p>
+        )}
+      </form>
     </div>
   );
 };
@@ -398,6 +479,8 @@ export default function Dashboard() {
             <AccountContent profile={profile} />
           ) : activeNav === 'statistieken' ? (
             <StatisticsContent />
+          ) : activeNav === 'settings' ? (
+            <SignatureContent />
           ) : (
             <div className="bg-white rounded-lg shadow p-6">
               <p className="text-gray-600">

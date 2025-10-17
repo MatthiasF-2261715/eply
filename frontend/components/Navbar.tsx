@@ -67,15 +67,17 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20"> {/* Changed from grid to flex */}
           <div className="flex-shrink-0">
-            <Link href="/" className="flex items-center space-x-2">
-              <Image
-                src="/logo.png"
-                alt="Eply Logo"
-                width={100}
-                height={32}
-                priority
-              />
-            </Link>
+            {!pathname.startsWith('/dashboard') && (
+              <Link href="/" className="flex items-center space-x-2">
+                <Image
+                  src="/logo.png"
+                  alt="Eply Logo"
+                  width={100}
+                  height={32}
+                  priority
+                />
+              </Link>
+            )}
           </div>
 
           <div className="hidden md:flex items-center justify-center space-x-8 flex-1"> {/* Added flex-1 */}

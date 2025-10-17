@@ -142,6 +142,33 @@ async function getImapCredentials() {
     }));
 }
 
+async function getUserSignature(userId) {
+  const result = await pool.query(
+    'SELECT signature FROM user_signatures WHERE related_user_id = $1',
+    [userId]
+  );
+  return result.rows.length > 0 ? result.rows[0].signature : '';
+}
+
+async function saveUserSignature(userId, signature) {
+  const exists = await pool.query(
+    'SELECT 1 FROM user_signatures WHERE related_user_id = $1',
+    [userId]
+  );
+  if (exists.rows.length > 0) {
+    await pool.query(
+      'UPDATE user_signatures SET signature = $1 WHERE related_user_id = $2',
+      [signature, userId]
+    );
+  } else {
+    await pool.query(
+      'INSERT INTO user_signatures (related_user_id, signature) VALUES ($1, $2)',
+      [userId, signature]
+    );
+  }
+  return true;
+}
+
 module.exports = { 
   getAssistantByEmail, 
   getUserById,
@@ -152,5 +179,7 @@ module.exports = {
   cleanupExpiredSessions,
   saveImapSettings,
   getUserEmails,
-  getImapCredentials
+  getImapCredentials,
+  getUserSignature,
+  saveUserSignature
 };

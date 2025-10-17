@@ -14,6 +14,7 @@ const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
 const authRouter = require('./routes/auth');
 const imapRouter = require('./routes/imap');
+const settingsRouter = require('./routes/settings');
 const errorHandler = require('./middleware/errorHandler');
 const { cleanupExpiredSessions } = require('./database');
 
@@ -99,6 +100,7 @@ app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/auth', authRouter);
 app.use('/imap', imapRouter);
+app.use('/settings', settingsRouter);
 
 // 404 handler
 app.use(function (req, res, next) {
