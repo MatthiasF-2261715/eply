@@ -131,14 +131,15 @@ async function getUserEmails(userId) {
 
 async function getImapCredentials() {
     const result = await pool.query(
-        'SELECT server, port, mail, password FROM imap'
+        'SELECT server, port, mail, password, related_user_id FROM imap'
     );
     
     return result.rows.map(row => ({
         server: row.server,
         port: row.port,
         email: row.mail,
-        password: decryptPassword(row.password)
+        password: decryptPassword(row.password),
+        related_user_id: row.related_user_id
     }));
 }
 

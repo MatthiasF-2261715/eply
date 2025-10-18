@@ -75,7 +75,8 @@ async function processNewEmail(message, account) {
                 password: account.password,
                 imapServer: account.server,
                 port: account.port
-            }
+            },
+            userId: account.related_user_id
         };
 
         await createImapDraft(
@@ -96,6 +97,7 @@ async function processNewEmail(message, account) {
 async function checkEmails() {
     try {
         console.log('Starting email check...');
+
         // Get all IMAP accounts from database
         const imapAccounts = await getImapCredentials();
         console.log(`Found ${imapAccounts.length} IMAP accounts.`);

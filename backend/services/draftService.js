@@ -1,5 +1,6 @@
 const Imap = require('imap');
 const { Client } = require('@microsoft/microsoft-graph-client');
+const { getUserSignature } = require('../database');
 
 function createImapConnection(session) {
     const { email, password, imapServer, port } = session.imap;
@@ -129,12 +130,20 @@ async function createImapDraft(session, ai_reply, mail_id, original_mail, { mail
                 const originalHeaders = Imap.parseHeader(buffer.toString('utf8'));
                 const replyHeaders = buildReplyHeaders(originalHeaders, session.imap.email, session.imap.imapServer);
                 
-                
-                let fullReply = ai_reply;
+                // Voeg signature toe aan ai_reply
+                let aiReplyWithSignature = ai_reply;
+                if (session.userId) {
+                    const signature = await getUserSignature(session.userId);
+                    if (signature) {
+                        aiReplyWithSignature += `\n\n${signature}`;
+                    }
+                }
+
+                let fullReply = aiReplyWithSignature;
                 if (original_mail) {
                     fullReply += formatOriginalMessage(originalHeaders, original_mail);
                 }
-                
+
                 const draftRaw = createDraftMessage(replyHeaders, fullReply, session.imap.email);
                 await new Promise((res, rej) => 
                     imap.openBox(DRAFTS, false, err => err ? rej(err) : res())
